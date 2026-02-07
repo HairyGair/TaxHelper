@@ -1,0 +1,89 @@
+# UK Self Assessment Tax Helper - Python Dependencies
+# Complete dependency list for all features
+
+# ============================================================
+# CORE DEPENDENCIES (Required for basic app functionality)
+# ============================================================
+
+# Web Framework
+streamlit==1.31.1
+
+# Data Processing
+pandas>=2.0.0
+
+# Database
+sqlalchemy>=2.0.0
+
+# Date/Time Handling
+python-dateutil>=2.8.0
+
+# Additional Streamlit dependencies
+altair>=5.0.0
+pillow>=10.0.0
+watchdog>=3.0.0
+
+# Mobile Responsiveness (device detection)
+streamlit-javascript>=0.1.5
+
+# ============================================================
+# EXPORT & REPORTING DEPENDENCIES
+# ============================================================
+
+# Excel Export
+openpyxl>=3.1.0
+
+# PDF Generation (for compliance reports)
+reportlab>=4.0.0
+
+# ============================================================
+# OCR RECEIPT SCANNER DEPENDENCIES (Optional)
+# ============================================================
+
+# OCR Engine Option 1: Tesseract (Free, Local, Fast)
+# Requires system installation:
+#   macOS: brew install tesseract
+#   Ubuntu: apt-get install tesseract-ocr
+#   Windows: https://github.com/UB-Mannheim/tesseract/wiki
+pytesseract>=0.3.10
+
+# OCR Engine Option 2: EasyOCR (Free, Better accuracy)
+# Note: First run downloads ~500MB of models
+# Uncomment to enable:
+# easyocr>=1.7.0
+
+# OCR Engine Option 3: Google Cloud Vision (Paid, Best accuracy)
+# Requires Google Cloud account and API key setup
+# See: https://cloud.google.com/vision/docs/setup
+# Uncomment to enable:
+# google-cloud-vision>=3.4.0
+
+# ============================================================
+# BUILD & DEPLOYMENT DEPENDENCIES
+# ============================================================
+
+# Build Tool (for creating standalone executable)
+pyinstaller>=6.0.0
+
+# ============================================================
+# DEVELOPMENT & TESTING DEPENDENCIES (Optional)
+# ============================================================
+
+# Uncomment for development:
+# pytest>=7.4.0
+# pytest-cov>=4.1.0
+
+# ============================================================
+# INSTALLATION INSTRUCTIONS
+# ============================================================
+
+# Standard installation (core features):
+#   pip install -r requirements.txt
+
+# Full installation (all OCR engines):
+#   1. Uncomment desired OCR engines above
+#   2. Install system dependencies for Tesseract (if using)
+#   3. pip install -r requirements.txt
+
+# Minimal installation (no OCR):
+#   Comment out OCR dependencies and run:
+#   pip install -r requirements.txt

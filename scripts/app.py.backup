@@ -1,0 +1,2984 @@
+"""
+UK Self Assessment Tax Helper
+A Streamlit application for managing sole trader tax records
+"""
+
+import streamlit as st
+import pandas as pd
+from datetime import datetime, timedelta
+from sqlalchemy import func, and_, or_
+import os
+import io
+
+# Import local modules
+from models import (
+    init_db, seed_default_data,
+    Transaction, Income, Expense, Mileage, Donation, Rule, Setting,
+    EXPENSE_CATEGORIES, INCOME_TYPES, MATCH_MODES
+)
+from utils import (
+    parse_csv, format_currency, parse_uk_date, export_to_excel,
+    get_tax_year_dates, calculate_mileage_allowance
+)
+
+# Page configuration
+st.set_page_config(
+    page_title="UK Self Assessment Tax Helper",
+    page_icon="💷",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Debug mode
+DEBUG = True
+
+# Initialize database
+DB_PATH = os.path.join(os.path.dirname(__file__), 'tax_helper.db')
+engine, Session = init_db(DB_PATH)
+
+
+# Session state initialization
+if 'db_session' not in st.session_state:
+    st.session_state.db_session = Session()
+    seed_default_data(st.session_state.db_session)
+
+session = st.session_state.db_session
+
+# CRITICAL: Expire all cached objects at the start of EVERY page load
+# This ensures we always see fresh data from the database
+session.expire_all()
+
+
+# Helper function to load settings
+def load_settings():
+    """Load all settings into a dictionary"""
+    settings = {}
+    for setting in session.query(Setting).all():
+        settings[setting.key] = setting.value
+    return settings
+
+
+# Helper function to get confidence badge
+def get_confidence_badge(score):
+    """
+    Returns a colored HTML badge based on confidence score
+    High (70-100): Green
+    Medium (40-69): Amber
+    Low (0-39): Red
+    """
+    if score is None or score == 0:
+        return ""
+
+    if score >= 70:
+        color = "#28a745"  # Green
+        emoji = "🟢"
+        label = "High"
+    elif score >= 40:
+        color = "#ffc107"  # Amber
+        emoji = "🟡"
+        label = "Medium"
+    else:
+        color = "#dc3545"  # Red
+        emoji = "🔴"
+        label = "Low"
+
+    return f'<span style="background-color: {color}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 5px;">{emoji} {label} {score}%</span>'
+
+
+# Helper function to get pattern emoji
+def get_pattern_emoji(pattern_type):
+    """Returns emoji badge for pattern type"""
+    pattern_emojis = {
+        'recurring_payment': '🔁',
+        'government_benefit': '🏛️',
+        'internal_transfer': '↔️',
+        'round_up': '💰',
+        'recurring_small_amount': '☕',
+        'large_purchase': '⚠️'
+    }
+    return pattern_emojis.get(pattern_type, '')
+
+
+# Helper function to get pattern description
+def get_pattern_description(pattern_type, pattern_metadata):
+    """Returns human-readable pattern description"""
+    if not pattern_type:
+        return ""
+
+    descriptions = {
+        'recurring_payment': 'Recurring payment detected',
+        'government_benefit': 'Government benefit payment',
+        'internal_transfer': 'Internal account transfer',
+        'round_up': 'Savings round-up',
+        'recurring_small_amount': 'Small recurring charge',
+        'large_purchase': 'Large purchase - review recommended'
+    }
+
+    base_desc = descriptions.get(pattern_type, pattern_type.replace('_', ' ').title())
+
+    # Add metadata details if available
+    if pattern_metadata:
+        if isinstance(pattern_metadata, dict):
+            if 'frequency' in pattern_metadata:
+                base_desc += f" ({pattern_metadata['frequency']})"
+            if 'occurrences' in pattern_metadata:
+                base_desc += f" - {pattern_metadata['occurrences']} times"
+
+    return base_desc
+
+
+def save_setting(key, value):
+    """Save or update a setting"""
+    setting = session.query(Setting).filter(Setting.key == key).first()
+    if setting:
+        setting.value = value
+    else:
+        setting = Setting(key=key, value=value)
+        session.add(setting)
+    session.commit()
+
+
+# Sidebar navigation
+st.sidebar.title("💷 Tax Helper")
+st.sidebar.markdown("---")
+
+page = st.sidebar.radio(
+    "Navigation",
+    [
+        "Dashboard",
+        "📥 Import Statements",
+        "🔍 Final Review",
+        "Income",
+        "Expenses",
+        "Mileage",
+        "Donations",
+        "Rules",
+        "Summary (HMRC)",
+        "📚 HMRC Guidance",
+        "Settings",
+        "Export"
+    ],
+    key="main_nav"  # Add explicit key to ensure state is tracked
+)
+
+# Debug info (remove this later if needed)
+if DEBUG:
+    st.sidebar.caption(f"Current page: {page}")
+    st.sidebar.caption(f"Session state keys: {len(st.session_state.keys())} keys")
+
+    # Add clear cache button in debug mode
+    if st.sidebar.button("🧹 Clear Form Cache"):
+        # Keep only essential keys
+        essential_keys = ['db_session', 'dashboard_last_refresh', 'main_nav', 'current_page',
+                         'page_size', 'sort_by', 'confidence_filter']
+        keys_to_remove = [k for k in list(st.session_state.keys()) if k not in essential_keys]
+        for key in keys_to_remove:
+            del st.session_state[key]
+        st.rerun()
+
+st.sidebar.markdown("---")
+settings = load_settings()
+st.sidebar.markdown(f"**Tax Year:** {settings.get('tax_year', 'N/A')}")
+
+# Show unreviewed transaction count in sidebar
+unreviewed_sidebar_count = session.query(func.count(Transaction.id)).filter(
+    Transaction.reviewed == False
+).scalar() or 0
+
+if unreviewed_sidebar_count > 0:
+    st.sidebar.warning(f"📥 {unreviewed_sidebar_count} unreviewed transaction{'s' if unreviewed_sidebar_count != 1 else ''}")
+else:
+    st.sidebar.success("✅ All transactions reviewed!")
+
+st.sidebar.markdown(f"**Database:** {DB_PATH}")
+
+
+# ============================================================================
+# PAGE: DASHBOARD
+# ============================================================================
+if page == "Dashboard":
+    st.title("📊 Dashboard")
+
+    # Add refresh button and last updated time
+    col1, col2, col3 = st.columns([3, 1, 1])
+    with col1:
+        st.markdown("Year-to-date summary for tax planning")
+    with col2:
+        if st.button("🔄 Refresh", type="secondary", use_container_width=True):
+            st.rerun()
+    with col3:
+        # Store and display last refresh time
+        if 'dashboard_last_refresh' not in st.session_state:
+            st.session_state.dashboard_last_refresh = datetime.now()
+        else:
+            st.session_state.dashboard_last_refresh = datetime.now()
+        st.caption(f"Updated: {st.session_state.dashboard_last_refresh.strftime('%H:%M:%S')}")
+
+    # Get tax year dates
+    tax_year = settings.get('tax_year', '2024/25')
+    start_date, end_date = get_tax_year_dates(tax_year)
+
+    st.info(f"Tax Year {tax_year}: {start_date.strftime('%d %B %Y')} to {end_date.strftime('%d %B %Y')}")
+
+    # Refresh database session to ensure fresh data
+    session.expire_all()
+
+    # ========================================================================
+    # TAX READINESS PROGRESS
+    # ========================================================================
+    st.markdown("---")
+    st.subheader("📋 Tax Return Readiness")
+
+    # Calculate readiness metrics
+    all_transactions = session.query(Transaction).all()
+    total_transactions = len(all_transactions)
+
+    # Metrics
+    unreviewed_count = session.query(func.count(Transaction.id)).filter(
+        Transaction.reviewed == False
+    ).scalar() or 0
+
+    # Count expenses in generic "Other business expenses" category
+    generic_expenses = session.query(Expense).filter(
+        Expense.category == 'Other business expenses'
+    ).count()
+
+    # Count high confidence transactions
+    high_confidence = len([t for t in all_transactions if t.confidence_score >= 70])
+
+    # Count transactions that need review
+    needs_manual_review = len([t for t in all_transactions if t.requires_review or t.confidence_score < 40])
+
+    # Count large expenses without receipts (over £100)
+    large_expenses_count = session.query(Expense).filter(
+        Expense.amount >= 100.0,
+        or_(Expense.receipt_link == '', Expense.receipt_link == None)
+    ).count()
+
+    # Calculate readiness score (0-100)
+    checks_passed = 0
+    total_checks = 5
+
+    # Check 1: All transactions imported
+    check_imported = total_transactions > 0
+    if check_imported:
+        checks_passed += 1
+
+    # Check 2: High auto-categorization rate (>80%)
+    categorization_rate = (high_confidence / total_transactions * 100) if total_transactions > 0 else 0
+    check_categorized = categorization_rate >= 80
+    if check_categorized:
+        checks_passed += 1
+
+    # Check 3: All transactions reviewed
+    check_reviewed = unreviewed_count == 0
+    if check_reviewed:
+        checks_passed += 1
+
+    # Check 4: Generic categories resolved (<50 remaining)
+    check_categories = generic_expenses < 50
+    if check_categories:
+        checks_passed += 1
+
+    # Check 5: Receipts for large expenses
+    check_receipts = large_expenses_count == 0
+    if check_receipts:
+        checks_passed += 1
+
+    readiness_score = int((checks_passed / total_checks) * 100)
+
+    # Display progress bar
+    if readiness_score >= 80:
+        progress_color = "🟢"
+        status_text = "Ready for HMRC!"
+    elif readiness_score >= 50:
+        progress_color = "🟡"
+        status_text = "Almost ready"
+    else:
+        progress_color = "🔴"
+        status_text = "Needs attention"
+
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.metric(f"{progress_color} Tax Return Readiness", f"{readiness_score}%", delta=status_text)
+        st.progress(readiness_score / 100)
+    with col2:
+        st.metric("Checks Passed", f"{checks_passed}/{total_checks}")
+
+    # Display checklist
+    st.markdown("**Checklist:**")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        # Check 1: Transactions imported
+        if check_imported:
+            st.success(f"✅ Transactions imported ({total_transactions:,})")
+        else:
+            st.error("❌ No transactions imported")
+            if st.button("Import CSV", key="import_csv_progress"):
+                st.info("Navigate to Inbox → Upload CSV")
+
+        # Check 2: Auto-categorization
+        if check_categorized:
+            st.success(f"✅ Auto-categorized ({categorization_rate:.1f}% high confidence)")
+        else:
+            st.warning(f"⚠️ Low confidence categorization ({categorization_rate:.1f}%)")
+
+        # Check 3: All reviewed
+        if check_reviewed:
+            st.success("✅ All transactions reviewed")
+        else:
+            st.warning(f"⚠️ {unreviewed_count} unreviewed transactions")
+            if st.button("Go to Inbox", key="goto_inbox_progress"):
+                st.info("Navigate to Inbox page to review transactions")
+
+    with col2:
+        # Check 4: Generic categories
+        if check_categories:
+            st.success(f"✅ Expenses properly categorized ({generic_expenses} generic)")
+        else:
+            st.warning(f"⚠️ {generic_expenses} expenses in 'Other business expenses'")
+            if st.button("Review Expenses", key="goto_expenses_progress"):
+                st.info("Navigate to Expenses page to categorize properly")
+
+        # Check 5: Receipts
+        if check_receipts:
+            st.success("✅ All large expenses have receipts")
+        else:
+            st.warning(f"⚠️ {large_expenses_count} large expenses (>£100) missing receipts")
+            st.caption("Consider adding receipt links to expense records")
+
+    st.markdown("---")
+
+    # Calculate totals
+    # Employment Income
+    employment_income = session.query(func.sum(Income.amount_gross)).filter(
+        and_(Income.income_type == 'Employment', Income.date >= start_date, Income.date <= end_date)
+    ).scalar() or 0.0
+    employment_tax = session.query(func.sum(Income.tax_deducted)).filter(
+        and_(Income.income_type == 'Employment', Income.date >= start_date, Income.date <= end_date)
+    ).scalar() or 0.0
+
+    # Self-Employment Income
+    self_employment_income = session.query(func.sum(Income.amount_gross)).filter(
+        and_(Income.income_type == 'Self-employment', Income.date >= start_date, Income.date <= end_date)
+    ).scalar() or 0.0
+
+    # Interest
+    interest_income = session.query(func.sum(Income.amount_gross)).filter(
+        and_(Income.income_type == 'Interest', Income.date >= start_date, Income.date <= end_date)
+    ).scalar() or 0.0
+
+    # Dividends
+    dividends_income = session.query(func.sum(Income.amount_gross)).filter(
+        and_(Income.income_type == 'Dividends', Income.date >= start_date, Income.date <= end_date)
+    ).scalar() or 0.0
+
+    # Property
+    property_income = session.query(func.sum(Income.amount_gross)).filter(
+        and_(Income.income_type == 'Property', Income.date >= start_date, Income.date <= end_date)
+    ).scalar() or 0.0
+
+    # Other Income
+    other_income = session.query(func.sum(Income.amount_gross)).filter(
+        and_(Income.income_type == 'Other', Income.date >= start_date, Income.date <= end_date)
+    ).scalar() or 0.0
+
+    # Total Expenses
+    total_expenses = session.query(func.sum(Expense.amount)).filter(
+        and_(Expense.date >= start_date, Expense.date <= end_date)
+    ).scalar() or 0.0
+
+    # Mileage Allowance
+    mileage_allowance = session.query(func.sum(Mileage.allowable_amount)).filter(
+        and_(Mileage.date >= start_date, Mileage.date <= end_date)
+    ).scalar() or 0.0
+
+    # Total Allowable Expenses
+    total_allowable = total_expenses + mileage_allowance
+
+    # Net Profit
+    net_profit = self_employment_income - total_allowable
+
+    # Donations
+    total_donations = session.query(func.sum(Donation.amount_paid)).filter(
+        and_(Donation.gift_aid == True, Donation.date >= start_date, Donation.date <= end_date)
+    ).scalar() or 0.0
+
+    # Unreviewed transactions
+    unreviewed_count = session.query(func.count(Transaction.id)).filter(
+        Transaction.reviewed == False
+    ).scalar() or 0
+
+    # Display cards
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("Self-Employment Turnover", format_currency(self_employment_income))
+        st.metric("Employment Income", format_currency(employment_income))
+        if employment_tax > 0:
+            st.caption(f"Tax deducted: {format_currency(employment_tax)}")
+
+    with col2:
+        st.metric("Total Expenses", format_currency(total_expenses))
+        st.metric("Mileage Allowance", format_currency(mileage_allowance))
+        st.metric("Total Allowable", format_currency(total_allowable))
+
+    with col3:
+        st.metric("Net Profit (Self-Emp)", format_currency(net_profit))
+        if net_profit < 0:
+            st.error("Showing a loss")
+        else:
+            st.success("Profitable")
+
+    with col4:
+        st.metric("Interest Income", format_currency(interest_income))
+        st.metric("Dividends", format_currency(dividends_income))
+        st.metric("Gift Aid Donations", format_currency(total_donations))
+
+    st.markdown("---")
+
+    # ========================================================================
+    # TAX ESTIMATION CALCULATOR
+    # ========================================================================
+    st.subheader("💷 Estimated Tax Liability (2024/25)")
+
+    # UK Tax bands for 2024/25
+    PERSONAL_ALLOWANCE = 12570
+    BASIC_RATE_LIMIT = 50270
+    HIGHER_RATE_LIMIT = 125140
+
+    # Tax rates
+    BASIC_RATE = 0.20  # 20%
+    HIGHER_RATE = 0.40  # 40%
+    ADDITIONAL_RATE = 0.45  # 45%
+
+    # National Insurance (Class 2 and Class 4 for self-employed)
+    CLASS_2_THRESHOLD = 6725  # £6,725 per year
+    CLASS_2_RATE = 3.45  # £3.45 per week
+    CLASS_4_LOWER_THRESHOLD = 12570
+    CLASS_4_UPPER_THRESHOLD = 50270
+    CLASS_4_LOWER_RATE = 0.06  # 6%
+    CLASS_4_UPPER_RATE = 0.02  # 2%
+
+    # Calculate total income
+    total_income = self_employment_income + employment_income + interest_income + dividends_income + property_income + other_income
+
+    # Calculate taxable profit (income minus allowable expenses)
+    taxable_profit = max(0, net_profit)  # Can't have negative taxable profit
+
+    # Calculate income tax on self-employment profit
+    remaining_income = taxable_profit
+    income_tax = 0.0
+
+    # Personal allowance (tapered if income > £100,000)
+    if total_income > 100000:
+        # Personal allowance reduces by £1 for every £2 over £100,000
+        reduced_allowance = max(0, PERSONAL_ALLOWANCE - ((total_income - 100000) / 2))
+    else:
+        reduced_allowance = PERSONAL_ALLOWANCE
+
+    # Apply personal allowance
+    if remaining_income > reduced_allowance:
+        remaining_income -= reduced_allowance
+    else:
+        remaining_income = 0
+
+    # Basic rate (20%)
+    if remaining_income > 0:
+        basic_rate_amount = min(remaining_income, BASIC_RATE_LIMIT - PERSONAL_ALLOWANCE)
+        income_tax += basic_rate_amount * BASIC_RATE
+        remaining_income -= basic_rate_amount
+
+    # Higher rate (40%)
+    if remaining_income > 0:
+        higher_rate_amount = min(remaining_income, HIGHER_RATE_LIMIT - BASIC_RATE_LIMIT)
+        income_tax += higher_rate_amount * HIGHER_RATE
+        remaining_income -= higher_rate_amount
+
+    # Additional rate (45%)
+    if remaining_income > 0:
+        income_tax += remaining_income * ADDITIONAL_RATE
+
+    # Calculate National Insurance
+    national_insurance = 0.0
+
+    # Class 2 NI (£3.45 per week if profit > £6,725)
+    if taxable_profit > CLASS_2_THRESHOLD:
+        national_insurance += CLASS_2_RATE * 52  # 52 weeks
+
+    # Class 4 NI (6% on profits between £12,570 and £50,270, 2% above)
+    if taxable_profit > CLASS_4_LOWER_THRESHOLD:
+        # Lower rate (6%)
+        lower_ni_amount = min(taxable_profit - CLASS_4_LOWER_THRESHOLD, CLASS_4_UPPER_THRESHOLD - CLASS_4_LOWER_THRESHOLD)
+        national_insurance += lower_ni_amount * CLASS_4_LOWER_RATE
+
+        # Upper rate (2%)
+        if taxable_profit > CLASS_4_UPPER_THRESHOLD:
+            upper_ni_amount = taxable_profit - CLASS_4_UPPER_THRESHOLD
+            national_insurance += upper_ni_amount * CLASS_4_UPPER_RATE
+
+    # Total tax liability
+    total_tax = income_tax + national_insurance
+
+    # Display in expandable section
+    with st.expander("View Tax Calculation Details", expanded=True):
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("**Income Summary:**")
+            st.write(f"Self-Employment Income: {format_currency(self_employment_income)}")
+            st.write(f"Allowable Expenses: {format_currency(total_allowable)}")
+            st.write(f"**Taxable Profit:** {format_currency(taxable_profit)}")
+
+            if employment_income > 0:
+                st.write(f"Employment Income: {format_currency(employment_income)}")
+                st.caption(f"Tax already deducted: {format_currency(employment_tax)}")
+
+        with col2:
+            st.markdown("**Tax Breakdown:**")
+            if income_tax > 0:
+                st.write(f"Income Tax: {format_currency(income_tax)}")
+            else:
+                st.write(f"Income Tax: £0.00 (Below threshold)")
+
+            if national_insurance > 0:
+                st.write(f"National Insurance: {format_currency(national_insurance)}")
+                st.caption(f"Class 2: {format_currency(CLASS_2_RATE * 52)}")
+                st.caption(f"Class 4: {format_currency(national_insurance - (CLASS_2_RATE * 52))}")
+            else:
+                st.write(f"National Insurance: £0.00")
+
+        # Total tax due
+        st.markdown("---")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Tax Due", format_currency(total_tax))
+        with col2:
+            st.metric("After-Tax Profit", format_currency(taxable_profit - total_tax))
+        with col3:
+            effective_rate = (total_tax / taxable_profit * 100) if taxable_profit > 0 else 0
+            st.metric("Effective Tax Rate", f"{effective_rate:.1f}%")
+
+        # Warnings and notes
+        if taxable_profit < 0:
+            st.error(f"⚠️ **You're showing a loss of {format_currency(abs(net_profit))}**")
+            st.warning("""
+            This may indicate:
+            - Personal expenses incorrectly marked as business
+            - Genuine business loss (can be carried forward)
+            - Missing income sources
+            - First year startup costs
+
+            **Action:** Review your expenses in the 'Other business expenses' category
+            """)
+        elif taxable_profit < 5000:
+            st.info(f"💡 Your profit is below £{CLASS_2_THRESHOLD:,} - You may not need to pay Class 2 NI")
+
+        st.caption("""
+        **Note:** This is an estimate based on 2024/25 tax rates. Actual liability may differ based on:
+        - Other income sources not captured here
+        - Tax relief claims (pension contributions, Gift Aid, etc.)
+        - Personal circumstances (marriage allowance, childcare, etc.)
+
+        Always verify with HMRC or a qualified accountant before filing.
+        """)
+
+    st.markdown("---")
+
+    # Income breakdown
+    st.subheader("Income Breakdown")
+    income_data = {
+        'Employment': employment_income,
+        'Self-employment': self_employment_income,
+        'Interest': interest_income,
+        'Dividends': dividends_income,
+        'Property': property_income,
+        'Other': other_income
+    }
+    income_df = pd.DataFrame(list(income_data.items()), columns=['Type', 'Amount'])
+    income_df['Amount'] = income_df['Amount'].apply(format_currency)
+    st.dataframe(income_df, use_container_width=True, hide_index=True)
+
+    # Expense breakdown by category
+    st.subheader("Expense Breakdown by Category")
+    expense_breakdown = session.query(
+        Expense.category,
+        func.sum(Expense.amount).label('total')
+    ).filter(
+        and_(Expense.date >= start_date, Expense.date <= end_date)
+    ).group_by(Expense.category).all()
+
+    if expense_breakdown:
+        expense_df = pd.DataFrame(expense_breakdown, columns=['Category', 'Amount'])
+        expense_df['Amount'] = expense_df['Amount'].apply(format_currency)
+        st.dataframe(expense_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No expenses recorded yet")
+
+    # Inbox status
+    if unreviewed_count > 0:
+        st.warning(f"⚠️ You have {unreviewed_count} unreviewed transaction{'s' if unreviewed_count != 1 else ''} in your Inbox. Navigate to the Inbox page to review them.")
+
+    st.markdown("---")
+
+    # Categorization Confidence Section
+    st.subheader("📊 Categorization Confidence")
+
+    # Get all transactions
+    all_transactions = session.query(Transaction).all()
+    total_transactions = len(all_transactions)
+
+    if total_transactions > 0:
+        # Calculate confidence metrics
+        high_confidence = len([t for t in all_transactions if t.confidence_score >= 70])
+        medium_confidence = len([t for t in all_transactions if 40 <= t.confidence_score < 70])
+        low_confidence = len([t for t in all_transactions if t.confidence_score < 40])
+        needs_review = len([t for t in all_transactions if t.requires_review])
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric(
+                "🟢 High Confidence",
+                high_confidence,
+                delta=f"{high_confidence/total_transactions*100:.1f}%" if total_transactions > 0 else "0%"
+            )
+
+        with col2:
+            st.metric(
+                "🟡 Medium Confidence",
+                medium_confidence,
+                delta=f"{medium_confidence/total_transactions*100:.1f}%" if total_transactions > 0 else "0%"
+            )
+
+        with col3:
+            st.metric(
+                "🔴 Low Confidence",
+                low_confidence,
+                delta=f"{low_confidence/total_transactions*100:.1f}%" if total_transactions > 0 else "0%"
+            )
+
+        with col4:
+            st.metric(
+                "⚠️ Needs Review",
+                needs_review,
+                delta=f"{needs_review/total_transactions*100:.1f}%" if total_transactions > 0 else "0%"
+            )
+    else:
+        st.info("No transactions imported yet")
+
+    st.markdown("---")
+
+    # Pattern Detection Summary
+    st.subheader("🔍 Pattern Detection Summary")
+
+    # Get pattern counts
+    pattern_counts = {}
+    for txn in all_transactions:
+        if txn.pattern_type:
+            pattern_counts[txn.pattern_type] = pattern_counts.get(txn.pattern_type, 0) + 1
+
+    if pattern_counts:
+        # Sort by count descending
+        sorted_patterns = sorted(pattern_counts.items(), key=lambda x: x[1], reverse=True)
+
+        # Display in columns
+        cols = st.columns(min(len(sorted_patterns), 4))
+        for idx, (pattern_type, count) in enumerate(sorted_patterns):
+            col_idx = idx % 4
+            with cols[col_idx]:
+                emoji = get_pattern_emoji(pattern_type)
+                label = pattern_type.replace('_', ' ').title()
+                st.metric(
+                    f"{emoji} {label}",
+                    count,
+                    delta=f"{count/total_transactions*100:.1f}%" if total_transactions > 0 else "0%"
+                )
+    else:
+        st.info("No patterns detected yet. Patterns are detected when transactions are imported.")
+
+
+# ============================================================================
+# PAGE: INBOX
+# ============================================================================
+elif page == "📥 Import Statements":
+    st.title("📥 Import Bank Statements")
+    st.markdown("**Upload your bank statement CSV files to import transactions**")
+
+    # Quick stats
+    total_count = session.query(Transaction).count()
+    unreviewed_count = session.query(Transaction).filter(Transaction.reviewed == False).count()
+
+    if total_count > 0:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Transactions", total_count)
+        with col2:
+            st.metric("Unreviewed", unreviewed_count)
+        with col3:
+            reviewed_pct = ((total_count - unreviewed_count) / total_count * 100) if total_count > 0 else 0
+            st.metric("Progress", f"{reviewed_pct:.0f}%")
+
+    # Point to Final Review for transaction review
+    if unreviewed_count > 0:
+        st.info(f"""
+        💡 **Next Steps:**
+
+        You have **{unreviewed_count} unreviewed transactions**.
+
+        After importing, go to **🔍 Final Review** (in the sidebar) to review and categorize your transactions.
+        """)
+
+    st.markdown("---")
+    st.subheader("Upload Bank Statement")
+
+    uploaded_file = st.file_uploader("Choose a CSV file", type=['csv'])
+
+    if uploaded_file is not None:
+        file_content = uploaded_file.read()
+
+        # Load column mappings from settings
+        column_mappings = {
+            'column_date': settings.get('column_date', 'Date'),
+            'column_type': settings.get('column_type', 'Type'),
+            'column_description': settings.get('column_description', 'Description'),
+            'column_paid_out': settings.get('column_paid_out', 'Paid out'),
+            'column_paid_in': settings.get('column_paid_in', 'Paid in'),
+            'column_value': settings.get('column_value', 'Value'),
+            'column_balance': settings.get('column_balance', 'Balance'),
+        }
+
+        # Load rules
+        rules = session.query(Rule).all()
+
+        # Parse CSV
+        df, errors = parse_csv(file_content, column_mappings, session, rules, Transaction)
+
+        if errors:
+            for error in errors:
+                if error.startswith("Warning:"):
+                    st.warning(error)
+                else:
+                    st.error(error)
+
+        if df is not None and len(df) > 0:
+            st.success(f"Parsed {len(df)} transactions successfully")
+
+            # Preview
+            st.subheader("Preview")
+            preview_df = df[['date', 'description', 'paid_out', 'paid_in', 'guessed_type', 'guessed_category']].copy()
+            preview_df['date'] = preview_df['date'].dt.strftime('%d/%m/%Y')
+            st.dataframe(preview_df, use_container_width=True)
+
+            # Import button
+            if st.button("Import Transactions", type="primary"):
+                try:
+                    imported_count = 0
+                    for _, row in df.iterrows():
+                        transaction = Transaction(
+                            date=row['date'],
+                            type=row.get('type', ''),
+                            description=row['description'],
+                            paid_out=row['paid_out'],
+                            paid_in=row['paid_in'],
+                            balance=row.get('balance', 0.0),
+                            guessed_type=row['guessed_type'],
+                            guessed_category=row['guessed_category'],
+                            is_personal=row['is_personal'],
+                            reviewed=row['reviewed'],
+                            notes=row['notes'],
+                            confidence_score=row.get('confidence_score', 0),
+                            merchant_confidence=row.get('merchant_confidence', 0),
+                            pattern_confidence=row.get('pattern_confidence', 0),
+                            pattern_type=row.get('pattern_type', None),
+                            pattern_metadata=row.get('pattern_metadata', None),
+                            requires_review=row.get('requires_review', False)
+                        )
+                        session.add(transaction)
+                        imported_count += 1
+                    session.commit()
+                    st.toast(f"Successfully imported {imported_count} transaction{'s' if imported_count != 1 else ''}", icon="📥")
+                    st.rerun()
+                except Exception as e:
+                    session.rollback()
+                    st.error(f"Error importing transactions: {str(e)}")
+
+    # Transaction review has been moved to the "🔍 Final Review" page (see sidebar)
+
+        # Refresh database session to ensure fresh data
+        session.expire_all()
+
+        # Summary stats
+        total_count = session.query(Transaction).count()
+        personal_count = session.query(Transaction).filter(Transaction.is_personal == True).count()
+        business_count = total_count - personal_count
+        unreviewed_count = session.query(Transaction).filter(Transaction.reviewed == False).count()
+        reviewed_count = total_count - unreviewed_count
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total", total_count)
+        with col2:
+            st.metric("Business", business_count, delta=f"{business_count/total_count*100:.0f}%" if total_count > 0 else "0%")
+        with col3:
+            st.metric("Personal", personal_count, delta=f"{personal_count/total_count*100:.0f}%" if total_count > 0 else "0%")
+        with col4:
+            st.metric("Unreviewed", unreviewed_count, delta=f"{reviewed_count} reviewed")
+
+        # Show warning if there are unreviewed transactions
+        if unreviewed_count > 0:
+            st.info(f"📋 You have {unreviewed_count} unreviewed transaction{'s' if unreviewed_count != 1 else ''} to process")
+
+        st.markdown("---")
+
+        # Confidence filter buttons
+        st.markdown("**Filter by Confidence:**")
+        filter_confidence = st.radio(
+            "Confidence Level",
+            ["All", "High Confidence", "Medium", "Low", "Needs Review"],
+            label_visibility="collapsed",
+            horizontal=True,
+            key="confidence_filter"
+        )
+
+        st.markdown("---")
+
+        # Filter options
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            show_reviewed = st.checkbox("Show reviewed", value=False)
+        with col2:
+            filter_type = st.selectbox("Filter by type", ["All", "Income", "Expense", "Ignore", "Unclassified"])
+        with col3:
+            filter_personal = st.selectbox("Filter by flag", ["All", "Business", "Personal"])
+
+        # Sorting options
+        col1, col2 = st.columns(2)
+        with col1:
+            sort_by = st.selectbox(
+                "Sort by",
+                ["Date (Newest)", "Date (Oldest)", "Confidence (High to Low)", "Confidence (Low to High)", "Amount (High to Low)"],
+                key="sort_by"
+            )
+
+        # Build query
+        query = session.query(Transaction)
+
+        if not show_reviewed:
+            query = query.filter(Transaction.reviewed == False)
+
+        if filter_type != "All":
+            if filter_type == "Unclassified":
+                query = query.filter(Transaction.guessed_type == None)
+            else:
+                query = query.filter(Transaction.guessed_type == filter_type)
+
+        if filter_personal == "Business":
+            query = query.filter(Transaction.is_personal == False)
+        elif filter_personal == "Personal":
+            query = query.filter(Transaction.is_personal == True)
+
+        # Apply confidence filters
+        if filter_confidence == "High Confidence":
+            query = query.filter(Transaction.confidence_score >= 70)
+        elif filter_confidence == "Medium":
+            query = query.filter(and_(Transaction.confidence_score >= 40, Transaction.confidence_score < 70))
+        elif filter_confidence == "Low":
+            query = query.filter(Transaction.confidence_score < 40)
+        elif filter_confidence == "Needs Review":
+            query = query.filter(Transaction.requires_review == True)
+
+        # Pagination to avoid loading too many transactions at once
+        total_count = query.count()
+
+        # Pagination controls
+        col1, col2, col3 = st.columns([2, 1, 2])
+        with col2:
+            page_size = st.selectbox("Per page", [50, 100, 200, 500], index=0, key="page_size")
+
+        total_pages = (total_count + page_size - 1) // page_size  # Ceiling division
+
+        if 'current_page' not in st.session_state:
+            st.session_state.current_page = 1
+
+        col1, col2, col3, col4, col5 = st.columns([1, 1, 2, 1, 1])
+        with col1:
+            if st.button("⏮ First", disabled=(st.session_state.current_page == 1)):
+                st.session_state.current_page = 1
+                st.rerun()
+        with col2:
+            if st.button("◀ Prev", disabled=(st.session_state.current_page == 1)):
+                st.session_state.current_page -= 1
+                st.rerun()
+        with col3:
+            st.markdown(f"**Page {st.session_state.current_page} of {max(1, total_pages)}**")
+        with col4:
+            if st.button("Next ▶", disabled=(st.session_state.current_page >= total_pages)):
+                st.session_state.current_page += 1
+                st.rerun()
+        with col5:
+            if st.button("Last ⏭", disabled=(st.session_state.current_page >= total_pages)):
+                st.session_state.current_page = total_pages
+                st.rerun()
+
+        # Apply sorting
+        if sort_by == "Date (Newest)":
+            query = query.order_by(Transaction.date.desc())
+        elif sort_by == "Date (Oldest)":
+            query = query.order_by(Transaction.date.asc())
+        elif sort_by == "Confidence (High to Low)":
+            query = query.order_by(Transaction.confidence_score.desc())
+        elif sort_by == "Confidence (Low to High)":
+            query = query.order_by(Transaction.confidence_score.asc())
+        elif sort_by == "Amount (High to Low)":
+            # Sort by the larger of paid_in or paid_out
+            query = query.order_by((Transaction.paid_in + Transaction.paid_out).desc())
+
+        # Apply pagination
+        offset = (st.session_state.current_page - 1) * page_size
+        transactions = query.limit(page_size).offset(offset).all()
+
+        if not transactions:
+            st.info("No transactions to review. Use filters above to see reviewed transactions.")
+        else:
+            st.markdown(f"**Showing {len(transactions)} of {total_count} total transactions**")
+
+            # ========================================================================
+            # SMART LEARNING SUGGESTION PROMPT
+            # ========================================================================
+            if 'smart_learning_suggestion' in st.session_state:
+                suggestion = st.session_state.smart_learning_suggestion
+
+                st.info(
+                    f"💡 **Smart Learning Detected!**\n\n"
+                    f"You changed a transaction from **{suggestion['merchant_key']}**.\n\n"
+                    f"We found **{suggestion['similar_count']} other transactions** from the same merchant.\n\n"
+                    f"Would you like to update them too?"
+                )
+
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    if st.button(f"✓ Update All {suggestion['similar_count']}", type="primary", use_container_width=True):
+                        # Apply changes to all similar transactions
+                        for txn_id in suggestion['similar_ids']:
+                            similar_txn = session.query(Transaction).filter(Transaction.id == txn_id).first()
+                            if similar_txn:
+                                if suggestion['change_type'] == 'personal':
+                                    similar_txn.is_personal = suggestion['new_is_personal']
+                                elif suggestion['change_type'] == 'category':
+                                    similar_txn.guessed_category = suggestion['new_category']
+                        session.commit()
+
+                        # Clear suggestion
+                        del st.session_state.smart_learning_suggestion
+
+                        st.toast(f"✅ Updated {suggestion['similar_count']} similar transactions!", icon="✅")
+                        st.rerun()
+
+                with col2:
+                    if st.button("📋 Review Each", use_container_width=True):
+                        # Don't auto-update, but keep suggestion visible
+                        # User can review manually
+                        del st.session_state.smart_learning_suggestion
+                        st.toast("Review each transaction manually", icon="ℹ️")
+                        st.rerun()
+
+                with col3:
+                    if st.button("X Ignore", use_container_width=True):
+                        # Clear suggestion
+                        del st.session_state.smart_learning_suggestion
+                        st.rerun()
+
+                st.markdown("---")
+
+            # Display transactions
+            for txn in transactions:
+                # Create expander title with badges
+                personal_badge = "🏠 PERSONAL" if txn.is_personal else "💼 BUSINESS"
+                amount_display = format_currency(txn.paid_in if txn.paid_in > 0 else txn.paid_out)
+
+                # Add pattern emoji if present
+                pattern_emoji = get_pattern_emoji(txn.pattern_type) if txn.pattern_type else ""
+
+                # Add review flag if needed
+                review_flag = " ⚠️ REVIEW" if txn.requires_review else ""
+
+                # Build title with confidence badge
+                expander_title = f"{txn.date.strftime('%d/%m/%Y')} | {personal_badge} | {pattern_emoji} {txn.description[:40]} | {amount_display}{review_flag}"
+
+                with st.expander(expander_title):
+                    # Display confidence badge prominently
+                    if txn.confidence_score and txn.confidence_score > 0:
+                        confidence_html = get_confidence_badge(txn.confidence_score)
+                        st.markdown(f"**Confidence Score:** {confidence_html}", unsafe_allow_html=True)
+
+                        # Show detailed confidence breakdown if available
+                        if txn.merchant_confidence or txn.pattern_confidence:
+                            conf_details = []
+                            if txn.merchant_confidence:
+                                conf_details.append(f"Merchant: {txn.merchant_confidence}%")
+                            if txn.pattern_confidence:
+                                conf_details.append(f"Pattern: {txn.pattern_confidence}%")
+                            st.caption(f"Breakdown: {' | '.join(conf_details)}")
+
+                    # Display pattern information if present
+                    if txn.pattern_type:
+                        pattern_desc = get_pattern_description(txn.pattern_type, txn.pattern_metadata)
+                        emoji = get_pattern_emoji(txn.pattern_type)
+                        st.info(f"{emoji} **Pattern Detected:** {pattern_desc}")
+
+                    # Show review flag prominently
+                    if txn.requires_review:
+                        st.warning("⚠️ **This transaction requires manual review**")
+
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        st.markdown(f"**Date:** {txn.date.strftime('%d/%m/%Y')}")
+                        st.markdown(f"**Description:** {txn.description}")
+                        st.markdown(f"**Paid Out:** {format_currency(txn.paid_out)}")
+                        st.markdown(f"**Paid In:** {format_currency(txn.paid_in)}")
+
+                    with col2:
+                        st.markdown(f"**Type:** {txn.guessed_type or 'Not classified'}")
+                        st.markdown(f"**Category:** {txn.guessed_category or 'N/A'}")
+                        # Color-coded personal/business indicator
+                        if txn.is_personal:
+                            st.markdown("**🏠 Personal Expense**")
+                        else:
+                            st.markdown("**💼 Business Transaction**")
+                        st.markdown(f"**Reviewed:** {'Yes' if txn.reviewed else 'No'}")
+
+                    # Edit form
+                    with st.form(key=f"txn_{txn.id}"):
+                        st.markdown("**Update Transaction**")
+
+                        col1, col2, col3 = st.columns(3)
+
+                        with col1:
+                            new_type = st.selectbox(
+                                "Type",
+                                ["Income", "Expense", "Ignore"],
+                                index=["Income", "Expense", "Ignore"].index(txn.guessed_type) if txn.guessed_type in ["Income", "Expense", "Ignore"] else 0,
+                                key=f"type_{txn.id}"
+                            )
+
+                        with col2:
+                            if new_type == "Income":
+                                new_category = st.selectbox("Income Type", INCOME_TYPES, key=f"cat_{txn.id}")
+                            elif new_type == "Expense":
+                                new_category = st.selectbox("Expense Category", EXPENSE_CATEGORIES, key=f"cat_{txn.id}")
+                            else:
+                                new_category = None
+                                st.markdown("*Category N/A for Ignore*")
+
+                        with col3:
+                            is_personal = st.checkbox("Mark as Personal", value=txn.is_personal, key=f"pers_{txn.id}")
+
+                        notes = st.text_area("Notes", value=txn.notes or '', key=f"notes_{txn.id}")
+
+                        col1, col2, col3 = st.columns(3)
+
+                        with col1:
+                            if st.form_submit_button("Update", type="primary"):
+                                # Store old values to detect changes
+                                old_is_personal = txn.is_personal
+                                old_category = txn.guessed_category
+
+                                # Update transaction
+                                txn.guessed_type = new_type
+                                txn.guessed_category = new_category
+                                txn.is_personal = is_personal
+                                txn.notes = notes
+                                session.commit()
+
+                                # ========================================================================
+                                # SMART LEARNING: Suggest updating similar transactions
+                                # ========================================================================
+
+                                # Extract merchant/supplier name (first few words of description)
+                                import re
+                                desc_cleaned = re.sub(r'\d{4}\s*\w{3}\d{2}', '', txn.description)  # Remove date patterns
+                                desc_cleaned = re.sub(r'\d{2}/\d{2}/\d{2,4}', '', desc_cleaned)  # Remove dates
+                                desc_cleaned = re.sub(r',.*', '', desc_cleaned)  # Remove everything after comma
+                                desc_cleaned = desc_cleaned.strip()
+                                # Get first 20 characters as merchant key
+                                merchant_key = desc_cleaned[:20] if len(desc_cleaned) >= 10 else desc_cleaned
+
+                                # Find similar transactions (same merchant pattern, different category/personal flag)
+                                similar_transactions = []
+
+                                # Check if personal flag changed
+                                if old_is_personal != is_personal:
+                                    similar_transactions = session.query(Transaction).filter(
+                                        Transaction.id != txn.id,  # Exclude current
+                                        Transaction.description.like(f'{merchant_key}%'),  # Similar merchant
+                                        Transaction.is_personal == old_is_personal  # Still has old flag
+                                    ).limit(100).all()
+
+                                # Check if category changed
+                                elif old_category != new_category and new_category:
+                                    similar_transactions = session.query(Transaction).filter(
+                                        Transaction.id != txn.id,  # Exclude current
+                                        Transaction.description.like(f'{merchant_key}%'),  # Similar merchant
+                                        Transaction.guessed_category != new_category  # Different category
+                                    ).limit(100).all()
+
+                                # Store suggestion in session state for display outside form
+                                if similar_transactions:
+                                    st.session_state.smart_learning_suggestion = {
+                                        'merchant_key': merchant_key,
+                                        'similar_count': len(similar_transactions),
+                                        'similar_ids': [t.id for t in similar_transactions],
+                                        'new_category': new_category,
+                                        'new_is_personal': is_personal,
+                                        'change_type': 'personal' if old_is_personal != is_personal else 'category'
+                                    }
+
+                                st.toast("Transaction updated successfully!", icon="✅")
+                                st.rerun()
+
+                        with col2:
+                            if st.form_submit_button("Mark Reviewed"):
+                                txn.reviewed = True
+                                session.commit()
+                                st.toast("Transaction marked as reviewed!", icon="✅")
+                                st.rerun()
+
+                        with col3:
+                            if st.form_submit_button("Delete", type="secondary"):
+                                session.delete(txn)
+                                session.commit()
+                                st.toast("Transaction deleted!", icon="🗑️")
+                                st.rerun()
+
+            # Bulk actions
+            st.markdown("---")
+            st.subheader("Bulk Actions on Filtered Transactions")
+            st.caption(f"These actions will affect ALL {total_count} filtered transactions (not just this page).")
+
+            # Row 1: Mark as Personal/Business
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                if st.button("💼 Mark All as Business", use_container_width=True):
+                    # Get ALL filtered transactions, not just current page
+                    all_filtered = query.all()
+                    count = len(all_filtered)
+                    if count > 0:
+                        for txn in all_filtered:
+                            txn.is_personal = False
+                        session.commit()
+                        st.toast(f"Marked {count} transaction{'s' if count != 1 else ''} as business", icon="💼")
+                        st.rerun()
+                    else:
+                        st.toast("No transactions to update", icon="ℹ️")
+
+            with col2:
+                if st.button("🏠 Mark All as Personal", use_container_width=True):
+                    # Get ALL filtered transactions, not just current page
+                    all_filtered = query.all()
+                    count = len(all_filtered)
+                    if count > 0:
+                        for txn in all_filtered:
+                            txn.is_personal = True
+                        session.commit()
+                        st.toast(f"Marked {count} transaction{'s' if count != 1 else ''} as personal", icon="🏠")
+                        st.rerun()
+                    else:
+                        st.toast("No transactions to update", icon="ℹ️")
+
+            with col3:
+                if st.button("✓ Mark All as Reviewed", use_container_width=True):
+                    # Get ALL filtered transactions, not just current page
+                    all_filtered = query.all()
+                    count = len(all_filtered)
+                    if count > 0:
+                        for txn in all_filtered:
+                            txn.reviewed = True
+                        session.commit()
+                        st.toast(f"Marked {count} transaction{'s' if count != 1 else ''} as reviewed!", icon="✅")
+                        st.rerun()
+                    else:
+                        st.toast("No transactions to mark as reviewed", icon="ℹ️")
+
+            # Row 2: Post and Delete
+            st.markdown("### Advanced Actions")
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                if st.button("📋 Post Business to Ledgers", type="primary", use_container_width=True):
+                    posted_count = 0
+                    # Get ALL filtered transactions, not just current page
+                    all_filtered = query.all()
+                    business_txns = [t for t in all_filtered if not t.is_personal and t.guessed_type in ['Income', 'Expense']]
+
+                    if len(business_txns) == 0:
+                        st.toast("No business transactions to post in filtered list", icon="ℹ️")
+                    else:
+                        for txn in business_txns:
+                            if txn.guessed_type == 'Income' and txn.paid_in > 0:
+                                income_record = Income(
+                                    date=txn.date,
+                                    source=txn.description,
+                                    description=txn.notes or '',
+                                    amount_gross=txn.paid_in,
+                                    tax_deducted=0.0,
+                                    income_type=txn.guessed_category or 'Other'
+                                )
+                                session.add(income_record)
+                                txn.reviewed = True
+                                posted_count += 1
+
+                            elif txn.guessed_type == 'Expense' and txn.paid_out > 0:
+                                expense_record = Expense(
+                                    date=txn.date,
+                                    supplier=txn.description,
+                                    description=txn.notes or '',
+                                    category=txn.guessed_category or 'Other business expenses',
+                                    amount=txn.paid_out,
+                                    receipt_link=''
+                                )
+                                session.add(expense_record)
+                                txn.reviewed = True
+                                posted_count += 1
+
+                        session.commit()
+                        st.toast(f"Posted {posted_count} business transaction{'s' if posted_count != 1 else ''} to ledgers and marked as reviewed!", icon="✅")
+                        st.rerun()
+
+            with col2:
+                st.empty()  # Placeholder
+
+            with col3:
+                if st.button("🗑️ Delete Personal Transactions", type="secondary", use_container_width=True):
+                    # Get ALL filtered transactions, not just current page
+                    all_filtered = query.all()
+                    personal_txns = [t for t in all_filtered if t.is_personal]
+                    if personal_txns:
+                        count = len(personal_txns)
+                        for txn in personal_txns:
+                            session.delete(txn)
+                        session.commit()
+                        st.toast(f"Deleted {count} personal transaction{'s' if count != 1 else ''}", icon="🗑️")
+                        st.rerun()
+                    else:
+                        st.toast("No personal transactions in filtered list", icon="ℹ️")
+
+
+# ============================================================================
+# PAGE: FINAL REVIEW
+# ============================================================================
+elif page == "🔍 Final Review":
+    st.title("🔍 Final Review")
+    st.markdown("**Complete your remaining unreviewed transactions after bulk analysis**")
+
+    st.info("""
+    💡 **Best used after bulk operations:**
+    - Run Smart Grouping on Expenses page first (categorize similar merchants in bulk)
+    - Use Smart Learning to auto-fix similar transactions
+    - Then use Final Review for remaining unreviewed transactions
+    - Review one at a time with quick decisions: Business/Personal, Category
+    - Skip transactions you're unsure about and come back later
+    """)
+
+    # Initialize session state for quick review
+    if 'quick_review_index' not in st.session_state:
+        st.session_state.quick_review_index = 0
+
+    # Get unreviewed transactions
+    unreviewed_txns = session.query(Transaction).filter(
+        Transaction.reviewed == False
+    ).order_by(Transaction.date.desc()).all()
+
+    if not unreviewed_txns:
+        st.success("🎉 **All done!** You've reviewed all transactions.")
+        st.balloons()
+
+        if st.button("← Back to Inbox"):
+            st.switch_page("app.py")
+    else:
+        # Progress bar
+        total_unreviewed = len(unreviewed_txns)
+        current_index = min(st.session_state.quick_review_index, total_unreviewed - 1)
+        progress = (current_index + 1) / total_unreviewed
+
+        st.progress(progress, text=f"Transaction {current_index + 1} of {total_unreviewed}")
+
+        # Get current transaction
+        current_txn = unreviewed_txns[current_index]
+
+        # Display transaction details in a card
+        st.markdown("---")
+
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            st.subheader(f"Transaction #{current_index + 1}")
+            st.markdown(f"**Date:** {current_txn.date.strftime('%d/%m/%Y')}")
+            st.markdown(f"**Description:** {current_txn.description}")
+
+        with col2:
+            amount = current_txn.paid_in if current_txn.paid_in > 0 else current_txn.paid_out
+            direction = "IN" if current_txn.paid_in > 0 else "OUT"
+            st.metric("Amount", f"£{amount:,.2f}", delta=direction)
+
+        # Show AI suggestions
+        if current_txn.confidence_score > 0:
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                confidence_html = get_confidence_badge(current_txn.confidence_score)
+                st.markdown(f"**AI Confidence:** {confidence_html}", unsafe_allow_html=True)
+            with col2:
+                personal_badge = "🏠 Personal" if current_txn.is_personal else "💼 Business"
+                st.markdown(f"**AI Suggests:** {personal_badge}")
+            with col3:
+                if current_txn.guessed_category:
+                    st.markdown(f"**AI Category:** {current_txn.guessed_category}")
+
+        st.markdown("---")
+
+        # Quick action form
+        with st.form(key=f"quick_review_{current_txn.id}", clear_on_submit=False):
+            st.subheader("Your Decision")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("**Is this Business or Personal?**")
+                is_business = st.radio(
+                    "Type",
+                    ["💼 Business", "🏠 Personal"],
+                    index=0 if not current_txn.is_personal else 1,
+                    key=f"qr_is_business_{current_txn.id}",
+                    horizontal=True,
+                    label_visibility="collapsed"
+                )
+                is_personal_flag = (is_business == "🏠 Personal")
+
+            with col2:
+                if not is_personal_flag:
+                    st.markdown("**What type of transaction?**")
+                    txn_type = st.radio(
+                        "Transaction Type",
+                        ["Income", "Expense"],
+                        index=0 if current_txn.guessed_type == "Income" else 1,
+                        key=f"qr_type_{current_txn.id}",
+                        horizontal=True,
+                        label_visibility="collapsed"
+                    )
+                else:
+                    txn_type = current_txn.guessed_type or "Expense"
+
+            # Category selection
+            if not is_personal_flag:
+                if txn_type == "Income":
+                    category = st.selectbox(
+                        "Income Category",
+                        INCOME_TYPES,
+                        key=f"qr_cat_{current_txn.id}"
+                    )
+                else:
+                    category = st.selectbox(
+                        "Expense Category",
+                        EXPENSE_CATEGORIES,
+                        key=f"qr_cat_{current_txn.id}"
+                    )
+            else:
+                category = None
+
+            # Action buttons
+            st.markdown("---")
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+                submit_and_next = st.form_submit_button(
+                    "✓ Save & Next",
+                    type="primary",
+                    use_container_width=True
+                )
+
+            with col2:
+                mark_reviewed_next = st.form_submit_button(
+                    "→ Accept AI & Next",
+                    use_container_width=True
+                )
+
+            with col3:
+                skip = st.form_submit_button(
+                    "⏭ Skip",
+                    use_container_width=True
+                )
+
+            with col4:
+                delete = st.form_submit_button(
+                    "🗑️ Delete",
+                    type="secondary",
+                    use_container_width=True
+                )
+
+            # Handle actions
+            if submit_and_next:
+                current_txn.is_personal = is_personal_flag
+                current_txn.guessed_type = txn_type if not is_personal_flag else "Ignore"
+                current_txn.guessed_category = category
+                current_txn.reviewed = True
+                session.commit()
+                st.session_state.quick_review_index += 1
+                st.toast("✓ Saved!", icon="✅")
+                st.rerun()
+
+            elif mark_reviewed_next:
+                # Just mark as reviewed with AI suggestions
+                current_txn.reviewed = True
+                session.commit()
+                st.session_state.quick_review_index += 1
+                st.toast("✓ Accepted AI suggestion!", icon="✅")
+                st.rerun()
+
+            elif skip:
+                # Skip to next without marking as reviewed
+                st.session_state.quick_review_index += 1
+                st.toast("⏭ Skipped", icon="ℹ️")
+                st.rerun()
+
+            elif delete:
+                session.delete(current_txn)
+                session.commit()
+                st.toast("🗑️ Deleted", icon="🗑️")
+                st.rerun()
+
+        # Navigation buttons below form
+        st.markdown("---")
+        col1, col2, col3 = st.columns([1, 2, 1])
+
+        with col1:
+            if st.button("◀ Previous", disabled=(current_index == 0)):
+                st.session_state.quick_review_index = max(0, current_index - 1)
+                st.rerun()
+
+        with col2:
+            st.markdown(f"**{total_unreviewed - current_index - 1} remaining**")
+
+        with col3:
+            if st.button("Next ▶", disabled=(current_index >= total_unreviewed - 1)):
+                st.session_state.quick_review_index = min(total_unreviewed - 1, current_index + 1)
+                st.rerun()
+
+
+# ============================================================================
+# PAGE: INCOME
+# ============================================================================
+elif page == "Income":
+    st.title("💰 Income")
+    st.markdown("Track all income sources")
+
+    tab1, tab2 = st.tabs(["View Income", "Add Income"])
+
+    with tab1:
+        st.subheader("Income Records")
+
+        # Filters
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            filter_income_type = st.selectbox("Filter by Type", ["All"] + INCOME_TYPES)
+        with col2:
+            date_from = st.date_input("From Date", value=datetime.now().replace(month=4, day=6))
+        with col3:
+            date_to = st.date_input("To Date", value=datetime.now())
+
+        # Query
+        query = session.query(Income)
+
+        if filter_income_type != "All":
+            query = query.filter(Income.income_type == filter_income_type)
+
+        query = query.filter(Income.date >= date_from, Income.date <= date_to)
+        income_records = query.order_by(Income.date.desc()).all()
+
+        if income_records:
+            # Summary
+            total = sum(r.amount_gross for r in income_records)
+            total_tax = sum(r.tax_deducted for r in income_records)
+            st.metric("Total Gross Income", format_currency(total))
+            if total_tax > 0:
+                st.caption(f"Total tax deducted: {format_currency(total_tax)}")
+
+            # Table
+            data = []
+            for record in income_records:
+                data.append({
+                    'ID': record.id,
+                    'Date': record.date.strftime('%d/%m/%Y'),
+                    'Source': record.source,
+                    'Description': record.description or '',
+                    'Amount (Gross)': format_currency(record.amount_gross),
+                    'Tax Deducted': format_currency(record.tax_deducted),
+                    'Type': record.income_type,
+                    'Notes': record.notes or ''
+                })
+
+            df = pd.DataFrame(data)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+
+            # Edit/Delete
+            st.markdown("---")
+            st.subheader("Edit or Delete Record")
+            record_id = st.number_input("Enter Record ID", min_value=1, step=1, key="income_edit_id")
+
+            if record_id:
+                record = session.query(Income).filter(Income.id == record_id).first()
+                if record:
+                    with st.form("edit_income"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            new_date = st.date_input("Date", value=record.date)
+                            new_source = st.text_input("Source", value=record.source)
+                            new_amount = st.number_input("Amount (Gross)", value=float(record.amount_gross), step=0.01)
+                        with col2:
+                            new_tax = st.number_input("Tax Deducted", value=float(record.tax_deducted), step=0.01)
+                            new_type = st.selectbox("Income Type", INCOME_TYPES, index=INCOME_TYPES.index(record.income_type) if record.income_type in INCOME_TYPES else 0)
+                            new_description = st.text_input("Description", value=record.description or '')
+                        new_notes = st.text_area("Notes", value=record.notes or '')
+
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.form_submit_button("Update", type="primary"):
+                                record.date = new_date
+                                record.source = new_source
+                                record.amount_gross = new_amount
+                                record.tax_deducted = new_tax
+                                record.income_type = new_type
+                                record.description = new_description
+                                record.notes = new_notes
+                                session.commit()
+                                st.success("Updated successfully")
+                                st.rerun()
+                        with col2:
+                            if st.form_submit_button("Delete", type="secondary"):
+                                session.delete(record)
+                                session.commit()
+                                st.success("Deleted successfully")
+                                st.rerun()
+                else:
+                    st.error("Record not found")
+
+        else:
+            st.info("No income records found")
+
+    with tab2:
+        st.subheader("Add Income Record")
+
+        with st.form("add_income"):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                income_date = st.date_input("Date", value=datetime.now())
+                income_source = st.text_input("Source (e.g., client name)")
+                income_amount = st.number_input("Amount (Gross)", min_value=0.0, step=0.01)
+
+            with col2:
+                income_tax = st.number_input("Tax Deducted", min_value=0.0, value=0.0, step=0.01)
+                income_type = st.selectbox("Income Type", INCOME_TYPES)
+                income_description = st.text_input("Description (optional)")
+
+            income_notes = st.text_area("Notes (optional)")
+
+            if st.form_submit_button("Add Income", type="primary"):
+                if income_source and income_amount > 0:
+                    new_income = Income(
+                        date=income_date,
+                        source=income_source,
+                        description=income_description,
+                        amount_gross=income_amount,
+                        tax_deducted=income_tax,
+                        income_type=income_type,
+                        notes=income_notes
+                    )
+                    session.add(new_income)
+                    session.commit()
+                    st.success("Income added successfully")
+                    st.rerun()
+                else:
+                    st.error("Please provide source and amount")
+
+
+# ============================================================================
+# PAGE: EXPENSES
+# ============================================================================
+elif page == "Expenses":
+    st.title("💳 Expenses")
+    st.markdown("Track allowable business expenses")
+
+    tab1, tab2 = st.tabs(["View Expenses", "Add Expense"])
+
+    with tab1:
+        st.subheader("Expense Records")
+
+        # View mode selector
+        col1, col2, col3, col4 = st.columns([2, 2, 2, 2])
+        with col1:
+            view_mode = st.radio("View Mode", ["📊 Grouped by Merchant", "📋 List View"], horizontal=False, key="expense_view_mode")
+        with col2:
+            filter_expense_cat = st.selectbox("Filter by Category", ["All"] + EXPENSE_CATEGORIES)
+        with col3:
+            date_from = st.date_input("From Date", value=datetime.now().replace(month=4, day=6), key="exp_from")
+        with col4:
+            date_to = st.date_input("To Date", value=datetime.now(), key="exp_to")
+
+        # Query
+        query = session.query(Expense)
+
+        if filter_expense_cat != "All":
+            query = query.filter(Expense.category == filter_expense_cat)
+
+        query = query.filter(Expense.date >= date_from, Expense.date <= date_to)
+        expense_records = query.order_by(Expense.date.desc()).all()
+
+        if expense_records:
+            # Summary
+            total = sum(r.amount for r in expense_records)
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Total Expenses", format_currency(total))
+            with col2:
+                st.metric("Number of Records", len(expense_records))
+
+            st.markdown("---")
+
+            # ========================================================================
+            # GROUPED VIEW with BULK ACTIONS
+            # ========================================================================
+            if view_mode == "📊 Grouped by Merchant":
+                st.subheader("Expenses Grouped by Merchant")
+                st.caption("💡 Tip: Use this view to quickly categorize similar transactions")
+
+                # Initialize session state for bulk selections
+                if 'bulk_selected_expenses' not in st.session_state:
+                    st.session_state.bulk_selected_expenses = set()
+
+                # Group expenses by merchant (extract clean merchant name)
+                import re
+                from collections import defaultdict
+
+                merchant_groups = defaultdict(list)
+                for expense in expense_records:
+                    # Clean merchant name (remove dates, transaction codes, etc.)
+                    supplier = expense.supplier
+                    # Remove common patterns: dates, transaction codes, card numbers
+                    cleaned = re.sub(r'\d{4}\s*\w{3}\d{2}', '', supplier)  # Remove "6477JUL24" patterns
+                    cleaned = re.sub(r'\d{2}/\d{2}/\d{2,4}', '', cleaned)  # Remove dates
+                    cleaned = re.sub(r',\s*\d+', '', cleaned)  # Remove ", 123" patterns
+                    cleaned = re.sub(r'CD\s*$', '', cleaned)  # Remove trailing "CD"
+                    cleaned = re.sub(r'D\s*$', '', cleaned)  # Remove trailing "D"
+                    cleaned = re.sub(r'\s+', ' ', cleaned).strip()  # Clean whitespace
+
+                    # Use first 30 characters as group key
+                    merchant_key = cleaned[:30] if cleaned else supplier[:30]
+                    merchant_groups[merchant_key].append(expense)
+
+                # Sort groups by total amount (highest first)
+                sorted_groups = sorted(merchant_groups.items(),
+                                     key=lambda x: sum(e.amount for e in x[1]),
+                                     reverse=True)
+
+                # Display each group in expandable section
+                for merchant_key, expenses in sorted_groups:
+                    group_total = sum(e.amount for e in expenses)
+                    group_count = len(expenses)
+
+                    # Get most common category in this group
+                    categories = [e.category for e in expenses]
+                    most_common_cat = max(set(categories), key=categories.count)
+
+                    # Warning if group has "Other business expenses"
+                    is_generic = most_common_cat == "Other business expenses"
+                    warning_emoji = "⚠️" if is_generic else "✓"
+
+                    # Expander for each merchant group
+                    with st.expander(
+                        f"{warning_emoji} **{merchant_key}** | {group_count} transactions | {format_currency(group_total)} | Category: {most_common_cat}",
+                        expanded=(is_generic and group_count >= 3)  # Auto-expand generic categories with multiple transactions
+                    ):
+                        # Group-level actions
+                        col1, col2, col3 = st.columns([2, 2, 2])
+
+                        with col1:
+                            # Select/deselect all in group
+                            group_key = f"select_group_{merchant_key}"
+                            all_selected = all(e.id in st.session_state.bulk_selected_expenses for e in expenses)
+                            if st.button(
+                                "✓ Select All" if not all_selected else "☐ Deselect All",
+                                key=f"bulk_select_{merchant_key}",
+                                use_container_width=True
+                            ):
+                                if all_selected:
+                                    # Deselect all
+                                    for e in expenses:
+                                        st.session_state.bulk_selected_expenses.discard(e.id)
+                                else:
+                                    # Select all
+                                    for e in expenses:
+                                        st.session_state.bulk_selected_expenses.add(e.id)
+                                st.rerun()
+
+                        with col2:
+                            # Bulk categorize all in group
+                            bulk_category = st.selectbox(
+                                "Change Category",
+                                [""] + EXPENSE_CATEGORIES,
+                                key=f"bulk_cat_{merchant_key}"
+                            )
+                            if bulk_category:
+                                if st.button(f"Apply to All {group_count}", key=f"apply_cat_{merchant_key}"):
+                                    for e in expenses:
+                                        e.category = bulk_category
+                                    session.commit()
+                                    st.toast(f"✅ Updated {group_count} expenses to '{bulk_category}'", icon="✅")
+                                    st.rerun()
+
+                        with col3:
+                            # Delete all in group
+                            if st.button(f"🗑️ Delete All {group_count}", key=f"delete_group_{merchant_key}", type="secondary"):
+                                for e in expenses:
+                                    session.delete(e)
+                                session.commit()
+                                st.toast(f"🗑️ Deleted {group_count} expenses", icon="🗑️")
+                                st.rerun()
+
+                        # Show individual transactions in group
+                        st.markdown("**Transactions:**")
+                        for expense in sorted(expenses, key=lambda x: x.date, reverse=True):
+                            col1, col2, col3, col4, col5 = st.columns([0.5, 1.5, 2, 1.5, 1])
+
+                            with col1:
+                                # Checkbox for individual selection
+                                is_selected = expense.id in st.session_state.bulk_selected_expenses
+                                if st.checkbox("", value=is_selected, key=f"select_exp_{expense.id}"):
+                                    st.session_state.bulk_selected_expenses.add(expense.id)
+                                else:
+                                    st.session_state.bulk_selected_expenses.discard(expense.id)
+
+                            with col2:
+                                st.text(expense.date.strftime('%d/%m/%Y'))
+
+                            with col3:
+                                st.text(expense.supplier[:40])
+
+                            with col4:
+                                st.text(expense.category)
+
+                            with col5:
+                                st.text(format_currency(expense.amount))
+
+                # Bulk actions bar (appears if items selected)
+                if st.session_state.bulk_selected_expenses:
+                    st.markdown("---")
+                    st.subheader(f"🔧 Bulk Actions ({len(st.session_state.bulk_selected_expenses)} selected)")
+
+                    col1, col2, col3, col4 = st.columns(4)
+
+                    with col1:
+                        bulk_action_category = st.selectbox(
+                            "Change Category",
+                            [""] + EXPENSE_CATEGORIES,
+                            key="bulk_action_category"
+                        )
+                        if bulk_action_category and st.button("Apply", key="apply_bulk_category"):
+                            count = 0
+                            for exp_id in list(st.session_state.bulk_selected_expenses):
+                                exp = session.query(Expense).filter(Expense.id == exp_id).first()
+                                if exp:
+                                    exp.category = bulk_action_category
+                                    count += 1
+                            session.commit()
+                            st.session_state.bulk_selected_expenses.clear()
+                            st.toast(f"✅ Updated {count} expenses", icon="✅")
+                            st.rerun()
+
+                    with col2:
+                        if st.button(f"🗑️ Delete Selected ({len(st.session_state.bulk_selected_expenses)})", type="secondary"):
+                            count = 0
+                            for exp_id in list(st.session_state.bulk_selected_expenses):
+                                exp = session.query(Expense).filter(Expense.id == exp_id).first()
+                                if exp:
+                                    session.delete(exp)
+                                    count += 1
+                            session.commit()
+                            st.session_state.bulk_selected_expenses.clear()
+                            st.toast(f"🗑️ Deleted {count} expenses", icon="🗑️")
+                            st.rerun()
+
+                    with col3:
+                        if st.button("☐ Clear Selection"):
+                            st.session_state.bulk_selected_expenses.clear()
+                            st.rerun()
+
+                    with col4:
+                        selected_total = sum(
+                            session.query(Expense).filter(Expense.id == exp_id).first().amount
+                            for exp_id in st.session_state.bulk_selected_expenses
+                            if session.query(Expense).filter(Expense.id == exp_id).first()
+                        )
+                        st.metric("Selected Total", format_currency(selected_total))
+
+            # ========================================================================
+            # LIST VIEW (Original)
+            # ========================================================================
+            else:
+                # Table
+                data = []
+                for record in expense_records:
+                    data.append({
+                        'ID': record.id,
+                        'Date': record.date.strftime('%d/%m/%Y'),
+                        'Supplier': record.supplier,
+                        'Description': record.description or '',
+                        'Category': record.category,
+                        'Amount': format_currency(record.amount),
+                        'Receipt': record.receipt_link or '',
+                        'Notes': record.notes or ''
+                    })
+
+                df = pd.DataFrame(data)
+                st.dataframe(df, use_container_width=True, hide_index=True)
+
+            # Edit/Delete
+            st.markdown("---")
+            st.subheader("Edit or Delete Record")
+            record_id = st.number_input("Enter Record ID", min_value=1, step=1, key="expense_edit_id")
+
+            if record_id:
+                record = session.query(Expense).filter(Expense.id == record_id).first()
+                if record:
+                    with st.form("edit_expense"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            new_date = st.date_input("Date", value=record.date)
+                            new_supplier = st.text_input("Supplier", value=record.supplier)
+                            new_amount = st.number_input("Amount", value=float(record.amount), step=0.01)
+                        with col2:
+                            new_category = st.selectbox("Category", EXPENSE_CATEGORIES, index=EXPENSE_CATEGORIES.index(record.category) if record.category in EXPENSE_CATEGORIES else 0)
+                            new_description = st.text_input("Description", value=record.description or '')
+                            new_receipt = st.text_input("Receipt Link", value=record.receipt_link or '')
+                        new_notes = st.text_area("Notes", value=record.notes or '')
+
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.form_submit_button("Update", type="primary"):
+                                record.date = new_date
+                                record.supplier = new_supplier
+                                record.amount = new_amount
+                                record.category = new_category
+                                record.description = new_description
+                                record.receipt_link = new_receipt
+                                record.notes = new_notes
+                                session.commit()
+                                st.success("Updated successfully")
+                                st.rerun()
+                        with col2:
+                            if st.form_submit_button("Delete", type="secondary"):
+                                session.delete(record)
+                                session.commit()
+                                st.success("Deleted successfully")
+                                st.rerun()
+                else:
+                    st.error("Record not found")
+
+        else:
+            st.info("No expense records found")
+
+    with tab2:
+        st.subheader("Add Expense Record")
+
+        with st.form("add_expense"):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                expense_date = st.date_input("Date", value=datetime.now())
+                expense_supplier = st.text_input("Supplier")
+                expense_amount = st.number_input("Amount", min_value=0.0, step=0.01)
+
+            with col2:
+                expense_category = st.selectbox("Category", EXPENSE_CATEGORIES)
+                expense_description = st.text_input("Description (optional)")
+                expense_receipt = st.text_input("Receipt Link (optional)")
+
+            expense_notes = st.text_area("Notes (optional)")
+
+            if st.form_submit_button("Add Expense", type="primary"):
+                if expense_supplier and expense_amount > 0:
+                    new_expense = Expense(
+                        date=expense_date,
+                        supplier=expense_supplier,
+                        description=expense_description,
+                        category=expense_category,
+                        amount=expense_amount,
+                        receipt_link=expense_receipt,
+                        notes=expense_notes
+                    )
+                    session.add(new_expense)
+                    session.commit()
+                    st.success("Expense added successfully")
+                    st.rerun()
+                else:
+                    st.error("Please provide supplier and amount")
+
+
+# ============================================================================
+# PAGE: MILEAGE
+# ============================================================================
+elif page == "Mileage":
+    st.title("🚗 Mileage")
+    st.markdown("Track business mileage for HMRC allowance")
+
+    st.info("HMRC rates: First 10,000 miles at 45p/mile, thereafter 25p/mile")
+
+    tab1, tab2 = st.tabs(["View Mileage", "Add Mileage"])
+
+    with tab1:
+        st.subheader("Mileage Records")
+
+        # Date filter
+        col1, col2 = st.columns(2)
+        with col1:
+            date_from = st.date_input("From Date", value=datetime.now().replace(month=4, day=6), key="mil_from")
+        with col2:
+            date_to = st.date_input("To Date", value=datetime.now(), key="mil_to")
+
+        # Query
+        mileage_records = session.query(Mileage).filter(
+            Mileage.date >= date_from,
+            Mileage.date <= date_to
+        ).order_by(Mileage.date.desc()).all()
+
+        if mileage_records:
+            # Summary
+            total_miles = sum(r.miles for r in mileage_records)
+            total_allowance = sum(r.allowable_amount for r in mileage_records)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Total Miles", f"{total_miles:,.1f}")
+            with col2:
+                st.metric("Total Allowance", format_currency(total_allowance))
+
+            # Table
+            data = []
+            for record in mileage_records:
+                data.append({
+                    'ID': record.id,
+                    'Date': record.date.strftime('%d/%m/%Y'),
+                    'Purpose': record.purpose,
+                    'From': record.from_location or '',
+                    'To': record.to_location or '',
+                    'Miles': f"{record.miles:.1f}",
+                    'Rate/Mile': format_currency(record.rate_per_mile),
+                    'Allowance': format_currency(record.allowable_amount),
+                    'Notes': record.notes or ''
+                })
+
+            df = pd.DataFrame(data)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+
+            # Edit/Delete
+            st.markdown("---")
+            st.subheader("Edit or Delete Record")
+            record_id = st.number_input("Enter Record ID", min_value=1, step=1, key="mileage_edit_id")
+
+            if record_id:
+                record = session.query(Mileage).filter(Mileage.id == record_id).first()
+                if record:
+                    with st.form("edit_mileage"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            new_date = st.date_input("Date", value=record.date)
+                            new_purpose = st.text_input("Purpose", value=record.purpose)
+                            new_from = st.text_input("From Location", value=record.from_location or '')
+                        with col2:
+                            new_to = st.text_input("To Location", value=record.to_location or '')
+                            new_miles = st.number_input("Miles", value=float(record.miles), step=0.1)
+                            new_rate = st.number_input("Rate per Mile", value=float(record.rate_per_mile), step=0.01)
+                        new_notes = st.text_area("Notes", value=record.notes or '')
+
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.form_submit_button("Update", type="primary"):
+                                record.date = new_date
+                                record.purpose = new_purpose
+                                record.from_location = new_from
+                                record.to_location = new_to
+                                record.miles = new_miles
+                                record.rate_per_mile = new_rate
+                                record.allowable_amount = new_miles * new_rate
+                                record.notes = new_notes
+                                session.commit()
+                                st.success("Updated successfully")
+                                st.rerun()
+                        with col2:
+                            if st.form_submit_button("Delete", type="secondary"):
+                                session.delete(record)
+                                session.commit()
+                                st.success("Deleted successfully")
+                                st.rerun()
+                else:
+                    st.error("Record not found")
+
+        else:
+            st.info("No mileage records found")
+
+    with tab2:
+        st.subheader("Add Mileage Record")
+
+        with st.form("add_mileage"):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                mileage_date = st.date_input("Date", value=datetime.now())
+                mileage_purpose = st.text_input("Purpose (e.g., Client meeting)")
+                mileage_from = st.text_input("From Location")
+
+            with col2:
+                mileage_to = st.text_input("To Location")
+                mileage_miles = st.number_input("Miles", min_value=0.0, step=0.1)
+                mileage_rate = st.number_input("Rate per Mile", value=0.45, step=0.01)
+
+            mileage_notes = st.text_area("Notes (optional)")
+
+            st.caption(f"Allowable amount: {format_currency(mileage_miles * mileage_rate)}")
+
+            if st.form_submit_button("Add Mileage", type="primary"):
+                if mileage_purpose and mileage_miles > 0:
+                    new_mileage = Mileage(
+                        date=mileage_date,
+                        purpose=mileage_purpose,
+                        from_location=mileage_from,
+                        to_location=mileage_to,
+                        miles=mileage_miles,
+                        rate_per_mile=mileage_rate,
+                        allowable_amount=mileage_miles * mileage_rate,
+                        notes=mileage_notes
+                    )
+                    session.add(new_mileage)
+                    session.commit()
+                    st.success("Mileage added successfully")
+                    st.rerun()
+                else:
+                    st.error("Please provide purpose and miles")
+
+
+# ============================================================================
+# PAGE: DONATIONS
+# ============================================================================
+elif page == "Donations":
+    st.title("🎁 Gift Aid Donations")
+    st.markdown("Track charitable donations for Gift Aid relief")
+
+    st.info("HMRC will automatically gross up your donations by 25% for Gift Aid")
+
+    tab1, tab2 = st.tabs(["View Donations", "Add Donation"])
+
+    with tab1:
+        st.subheader("Donation Records")
+
+        # Date filter
+        col1, col2 = st.columns(2)
+        with col1:
+            date_from = st.date_input("From Date", value=datetime.now().replace(month=4, day=6), key="don_from")
+        with col2:
+            date_to = st.date_input("To Date", value=datetime.now(), key="don_to")
+
+        # Query
+        donation_records = session.query(Donation).filter(
+            Donation.date >= date_from,
+            Donation.date <= date_to
+        ).order_by(Donation.date.desc()).all()
+
+        if donation_records:
+            # Summary
+            total = sum(r.amount_paid for r in donation_records if r.gift_aid)
+            st.metric("Total Gift Aid Donations", format_currency(total))
+
+            # Table
+            data = []
+            for record in donation_records:
+                data.append({
+                    'ID': record.id,
+                    'Date': record.date.strftime('%d/%m/%Y'),
+                    'Charity': record.charity,
+                    'Amount Paid': format_currency(record.amount_paid),
+                    'Gift Aid': 'Yes' if record.gift_aid else 'No',
+                    'Notes': record.notes or ''
+                })
+
+            df = pd.DataFrame(data)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+
+            # Edit/Delete
+            st.markdown("---")
+            st.subheader("Edit or Delete Record")
+            record_id = st.number_input("Enter Record ID", min_value=1, step=1, key="donation_edit_id")
+
+            if record_id:
+                record = session.query(Donation).filter(Donation.id == record_id).first()
+                if record:
+                    with st.form("edit_donation"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            new_date = st.date_input("Date", value=record.date)
+                            new_charity = st.text_input("Charity", value=record.charity)
+                        with col2:
+                            new_amount = st.number_input("Amount Paid", value=float(record.amount_paid), step=0.01)
+                            new_gift_aid = st.checkbox("Gift Aid", value=record.gift_aid)
+                        new_notes = st.text_area("Notes", value=record.notes or '')
+
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.form_submit_button("Update", type="primary"):
+                                record.date = new_date
+                                record.charity = new_charity
+                                record.amount_paid = new_amount
+                                record.gift_aid = new_gift_aid
+                                record.notes = new_notes
+                                session.commit()
+                                st.success("Updated successfully")
+                                st.rerun()
+                        with col2:
+                            if st.form_submit_button("Delete", type="secondary"):
+                                session.delete(record)
+                                session.commit()
+                                st.success("Deleted successfully")
+                                st.rerun()
+                else:
+                    st.error("Record not found")
+
+        else:
+            st.info("No donation records found")
+
+    with tab2:
+        st.subheader("Add Donation Record")
+
+        with st.form("add_donation"):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                donation_date = st.date_input("Date", value=datetime.now())
+                donation_charity = st.text_input("Charity Name")
+
+            with col2:
+                donation_amount = st.number_input("Amount Paid", min_value=0.0, step=0.01)
+                donation_gift_aid = st.checkbox("Gift Aid", value=True)
+
+            donation_notes = st.text_area("Notes (optional)")
+
+            if st.form_submit_button("Add Donation", type="primary"):
+                if donation_charity and donation_amount > 0:
+                    new_donation = Donation(
+                        date=donation_date,
+                        charity=donation_charity,
+                        amount_paid=donation_amount,
+                        gift_aid=donation_gift_aid,
+                        notes=donation_notes
+                    )
+                    session.add(new_donation)
+                    session.commit()
+                    st.success("Donation added successfully")
+                    st.rerun()
+                else:
+                    st.error("Please provide charity name and amount")
+
+
+# ============================================================================
+# PAGE: RULES
+# ============================================================================
+elif page == "Rules":
+    st.title("⚙️ Categorization Rules")
+    st.markdown("Manage automatic transaction categorization rules")
+
+    tab1, tab2 = st.tabs(["View Rules", "Add Rule"])
+
+    with tab1:
+        st.subheader("Existing Rules")
+
+        rules = session.query(Rule).order_by(Rule.priority).all()
+
+        if rules:
+            st.markdown(f"**{len(rules)} rules configured** (lower priority = applied first)")
+
+            # Table
+            data = []
+            for rule in rules:
+                data.append({
+                    'ID': rule.id,
+                    'Priority': rule.priority,
+                    'Match Mode': rule.match_mode,
+                    'Text to Match': rule.text_to_match,
+                    'Map To': rule.map_to,
+                    'Income Type': rule.income_type or '',
+                    'Expense Category': rule.expense_category or '',
+                    'Enabled': 'Yes' if rule.enabled else 'No',
+                    'Notes': rule.notes or ''
+                })
+
+            df = pd.DataFrame(data)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+
+            # Edit/Delete
+            st.markdown("---")
+            st.subheader("Edit or Delete Rule")
+            rule_id = st.number_input("Enter Rule ID", min_value=1, step=1, key="rule_edit_id")
+
+            if rule_id:
+                rule = session.query(Rule).filter(Rule.id == rule_id).first()
+                if rule:
+                    with st.form("edit_rule"):
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            new_match_mode = st.selectbox("Match Mode", MATCH_MODES, index=MATCH_MODES.index(rule.match_mode) if rule.match_mode in MATCH_MODES else 0)
+                            new_text = st.text_input("Text to Match", value=rule.text_to_match)
+                        with col2:
+                            new_map_to = st.selectbox("Map To", ["Income", "Expense", "Ignore"], index=["Income", "Expense", "Ignore"].index(rule.map_to) if rule.map_to in ["Income", "Expense", "Ignore"] else 0)
+                            new_priority = st.number_input("Priority", value=rule.priority, step=1)
+                        with col3:
+                            new_enabled = st.checkbox("Enabled", value=rule.enabled)
+
+                        if new_map_to == "Income":
+                            new_income_type = st.selectbox("Income Type", INCOME_TYPES, index=INCOME_TYPES.index(rule.income_type) if rule.income_type in INCOME_TYPES else 0)
+                            new_expense_cat = None
+                        elif new_map_to == "Expense":
+                            new_expense_cat = st.selectbox("Expense Category", EXPENSE_CATEGORIES, index=EXPENSE_CATEGORIES.index(rule.expense_category) if rule.expense_category in EXPENSE_CATEGORIES else 0)
+                            new_income_type = None
+                        else:
+                            new_income_type = None
+                            new_expense_cat = None
+
+                        new_notes = st.text_area("Notes", value=rule.notes or '')
+
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.form_submit_button("Update", type="primary"):
+                                rule.match_mode = new_match_mode
+                                rule.text_to_match = new_text
+                                rule.map_to = new_map_to
+                                rule.income_type = new_income_type
+                                rule.expense_category = new_expense_cat
+                                rule.priority = new_priority
+                                rule.enabled = new_enabled
+                                rule.notes = new_notes
+                                session.commit()
+                                st.success("Updated successfully")
+                                st.rerun()
+                        with col2:
+                            if st.form_submit_button("Delete", type="secondary"):
+                                session.delete(rule)
+                                session.commit()
+                                st.success("Deleted successfully")
+                                st.rerun()
+                else:
+                    st.error("Rule not found")
+
+        else:
+            st.info("No rules configured yet")
+
+    with tab2:
+        st.subheader("Add New Rule")
+
+        with st.form("add_rule"):
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                rule_match_mode = st.selectbox("Match Mode", MATCH_MODES)
+                rule_text = st.text_input("Text to Match (case-insensitive)")
+
+            with col2:
+                rule_map_to = st.selectbox("Map To", ["Income", "Expense", "Ignore"])
+                rule_priority = st.number_input("Priority", value=100, step=1)
+
+            with col3:
+                rule_enabled = st.checkbox("Enabled", value=True)
+
+            if rule_map_to == "Income":
+                rule_income_type = st.selectbox("Income Type", INCOME_TYPES)
+                rule_expense_cat = None
+            elif rule_map_to == "Expense":
+                rule_expense_cat = st.selectbox("Expense Category", EXPENSE_CATEGORIES)
+                rule_income_type = None
+            else:
+                rule_income_type = None
+                rule_expense_cat = None
+
+            rule_notes = st.text_area("Notes (optional)")
+
+            if st.form_submit_button("Add Rule", type="primary"):
+                if rule_text:
+                    new_rule = Rule(
+                        match_mode=rule_match_mode,
+                        text_to_match=rule_text,
+                        map_to=rule_map_to,
+                        income_type=rule_income_type,
+                        expense_category=rule_expense_cat,
+                        priority=rule_priority,
+                        enabled=rule_enabled,
+                        notes=rule_notes
+                    )
+                    session.add(new_rule)
+                    session.commit()
+                    st.success("Rule added successfully")
+                    st.rerun()
+                else:
+                    st.error("Please provide text to match")
+
+
+# ============================================================================
+# PAGE: SUMMARY (HMRC)
+# ============================================================================
+elif page == "Summary (HMRC)":
+    st.title("📋 HMRC Self Assessment Summary")
+    st.markdown("Copy and paste these figures into your tax return")
+
+    # Get tax year dates
+    tax_year = settings.get('tax_year', '2024/25')
+    start_date, end_date = get_tax_year_dates(tax_year)
+
+    st.info(f"Summary for Tax Year {tax_year}: {start_date.strftime('%d %B %Y')} to {end_date.strftime('%d %B %Y')}")
+
+    # Calculate all totals
+    # Employment
+    employment_total = session.query(func.sum(Income.amount_gross)).filter(
+        and_(Income.income_type == 'Employment', Income.date >= start_date, Income.date <= end_date)
+    ).scalar() or 0.0
+    employment_tax = session.query(func.sum(Income.tax_deducted)).filter(
+        and_(Income.income_type == 'Employment', Income.date >= start_date, Income.date <= end_date)
+    ).scalar() or 0.0
+
+    # Self-employment
+    self_employment_total = session.query(func.sum(Income.amount_gross)).filter(
+        and_(Income.income_type == 'Self-employment', Income.date >= start_date, Income.date <= end_date)
+    ).scalar() or 0.0
+
+    # Interest
+    interest_total = session.query(func.sum(Income.amount_gross)).filter(
+        and_(Income.income_type == 'Interest', Income.date >= start_date, Income.date <= end_date)
+    ).scalar() or 0.0
+
+    # Dividends
+    dividends_total = session.query(func.sum(Income.amount_gross)).filter(
+        and_(Income.income_type == 'Dividends', Income.date >= start_date, Income.date <= end_date)
+    ).scalar() or 0.0
+
+    # Property
+    property_total = session.query(func.sum(Income.amount_gross)).filter(
+        and_(Income.income_type == 'Property', Income.date >= start_date, Income.date <= end_date)
+    ).scalar() or 0.0
+
+    # Expenses
+    expenses_total = session.query(func.sum(Expense.amount)).filter(
+        and_(Expense.date >= start_date, Expense.date <= end_date)
+    ).scalar() or 0.0
+
+    # Mileage
+    mileage_total = session.query(func.sum(Mileage.allowable_amount)).filter(
+        and_(Mileage.date >= start_date, Mileage.date <= end_date)
+    ).scalar() or 0.0
+
+    # Total allowable
+    total_allowable = expenses_total + mileage_total
+
+    # Net profit
+    net_profit = self_employment_total - total_allowable
+
+    # Donations
+    donations_total = session.query(func.sum(Donation.amount_paid)).filter(
+        and_(Donation.gift_aid == True, Donation.date >= start_date, Donation.date <= end_date)
+    ).scalar() or 0.0
+
+    # Build summary text
+    summary_text = f"""=== HMRC Self Assessment Summary for Tax Year {tax_year} ===
+
+EMPLOYMENT (if applicable)
+Box 1 - Pay from employment: {format_currency(employment_total)}
+Box 2 - UK tax deducted: {format_currency(employment_tax)}
+
+SELF-EMPLOYMENT (SA103S - Short Form)
+Box 15 - Turnover: {format_currency(self_employment_total)}
+Box 31 - Total allowable expenses: {format_currency(total_allowable)}
+Box 32 - Net profit: {format_currency(net_profit)}
+
+SAVINGS INTEREST
+Box 1 - Interest (gross): {format_currency(interest_total)}
+
+DIVIDENDS
+Box 1 - Dividends (gross): {format_currency(dividends_total)}
+
+PROPERTY INCOME
+Income from property: {format_currency(property_total)}
+
+GIFT AID
+Donations paid: {format_currency(donations_total)} (HMRC will gross-up automatically)
+
+---
+
+BREAKDOWN OF ALLOWABLE EXPENSES:
+Total Expenses: {format_currency(expenses_total)}
+Total Mileage Allowance: {format_currency(mileage_total)}
+"""
+
+    # Display summary
+    st.text_area("Summary", value=summary_text, height=600)
+
+    # Copy button
+    st.button("Copy to Clipboard", help="Select all text above and copy (Ctrl+C / Cmd+C)")
+
+    # Expense breakdown
+    st.markdown("---")
+    st.subheader("Expense Breakdown by Category")
+
+    expense_breakdown = session.query(
+        Expense.category,
+        func.sum(Expense.amount).label('total')
+    ).filter(
+        and_(Expense.date >= start_date, Expense.date <= end_date)
+    ).group_by(Expense.category).all()
+
+    if expense_breakdown:
+        data = []
+        for cat, total in expense_breakdown:
+            data.append({
+                'Category': cat,
+                'Amount': format_currency(total)
+            })
+        df = pd.DataFrame(data)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+
+
+# ============================================================================
+# PAGE: SETTINGS
+# ============================================================================
+elif page == "Settings":
+    st.title("⚙️ Settings")
+    st.markdown("Configure application settings")
+
+    tab1, tab2 = st.tabs(["General Settings", "Column Mappings"])
+
+    with tab1:
+        st.subheader("General Settings")
+
+        with st.form("settings_general"):
+            tax_year = st.text_input("Tax Year (e.g., 2024/25)", value=settings.get('tax_year', '2024/25'))
+            accounting_basis = st.selectbox("Accounting Basis", ["Cash", "Accruals"], index=0 if settings.get('accounting_basis') == 'Cash' else 1)
+            currency = st.text_input("Currency", value=settings.get('currency', 'GBP'))
+            timezone = st.text_input("Timezone", value=settings.get('timezone', 'Europe/London'))
+            mileage_rate = st.number_input("Mileage Rate (first 10k miles)", value=float(settings.get('mileage_rate_standard', '0.45')), step=0.01)
+            mileage_rate_reduced = st.number_input("Mileage Rate (after 10k miles)", value=float(settings.get('mileage_rate_reduced', '0.25')), step=0.01)
+
+            if st.form_submit_button("Save Settings", type="primary"):
+                save_setting('tax_year', tax_year)
+                save_setting('accounting_basis', accounting_basis)
+                save_setting('currency', currency)
+                save_setting('timezone', timezone)
+                save_setting('mileage_rate_standard', str(mileage_rate))
+                save_setting('mileage_rate_reduced', str(mileage_rate_reduced))
+                st.success("Settings saved successfully")
+                st.rerun()
+
+    with tab2:
+        st.subheader("CSV Column Mappings")
+        st.markdown("Configure how your bank statement columns map to the app")
+
+        with st.form("settings_columns"):
+            col_date = st.text_input("Date Column", value=settings.get('column_date', 'Date'))
+            col_type = st.text_input("Type Column", value=settings.get('column_type', 'Type'))
+            col_description = st.text_input("Description Column", value=settings.get('column_description', 'Description'))
+            col_paid_out = st.text_input("Paid Out Column", value=settings.get('column_paid_out', 'Paid out'))
+            col_paid_in = st.text_input("Paid In Column", value=settings.get('column_paid_in', 'Paid in'))
+            col_balance = st.text_input("Balance Column", value=settings.get('column_balance', 'Balance'))
+
+            if st.form_submit_button("Save Mappings", type="primary"):
+                save_setting('column_date', col_date)
+                save_setting('column_type', col_type)
+                save_setting('column_description', col_description)
+                save_setting('column_paid_out', col_paid_out)
+                save_setting('column_paid_in', col_paid_in)
+                save_setting('column_balance', col_balance)
+                st.success("Column mappings saved successfully")
+                st.rerun()
+
+    st.markdown("---")
+    st.subheader("Database Management")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("**Database Location**")
+        st.code(DB_PATH)
+
+    with col2:
+        st.markdown("**Backup**")
+        if st.button("Create Backup"):
+            import shutil
+            backup_path = DB_PATH.replace('.db', f'_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.db')
+            shutil.copy(DB_PATH, backup_path)
+            st.success(f"Backup created: {backup_path}")
+
+
+# ============================================================================
+# PAGE: HMRC GUIDANCE
+# ============================================================================
+elif page == "📚 HMRC Guidance":
+    st.title("📚 HMRC Guidance & Compliance")
+    st.markdown("**Essential information about UK tax rules for self-employed individuals**")
+
+    st.warning("""
+    ⚠️ **IMPORTANT DISCLAIMER:**
+
+    This guidance is for informational purposes only and is based on HMRC rules for 2024/25 tax year.
+
+    **This app does not provide tax advice.** For professional advice, consult a qualified accountant or tax advisor.
+
+    Tax Helper is a record-keeping tool to help organize your finances for HMRC self-assessment.
+    """)
+
+    # Create tabs for different sections
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "Allowable Expenses",
+        "Common Mistakes",
+        "Record Keeping",
+        "Tax Calculations",
+        "Resources"
+    ])
+
+    with tab1:
+        st.subheader("✅ What Are Allowable Expenses?")
+
+        st.info("""
+        **"Wholly and Exclusively" Rule**
+
+        For an expense to be allowable, it must be:
+        - **Wholly** = entirely for business purposes
+        - **Exclusively** = not for personal use
+
+        If an expense has both business and personal use, only claim the business proportion.
+        """)
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### ✅ ALLOWED")
+            st.success("""
+            - Business premises rent
+            - Business equipment
+            - Stock/raw materials
+            - Business travel (NOT commuting)
+            - Business phone/internet (proportion)
+            - Professional subscriptions
+            - Business insurance
+            - Accountancy fees
+            - Business banking fees
+            - Advertising/marketing
+            - Staff costs
+            - Training (business-related)
+            """)
+
+        with col2:
+            st.markdown("### ❌ NOT ALLOWED")
+            st.error("""
+            - Personal expenses
+            - Commuting to regular workplace
+            - Entertainment (meals with clients)*
+            - Personal clothing
+            - Fines and penalties
+            - Personal subscriptions
+            - Gym membership
+            - Personal phone/internet
+            - Client gifts >£50/person/year
+
+            *Unless overnight business travel
+            """)
+
+        st.markdown("---")
+        st.subheader("⚡ Partially Allowed")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("**🏠 Home Office**")
+            st.write("Two methods:")
+            st.write("1. **Flat rate** (simpler):")
+            st.code("£10/month - No receipts needed")
+            st.write("2. **Actual costs** (more complex):")
+            st.write("- Claim business % of rent, utilities, etc.")
+            st.write("- Need receipts and justification")
+
+        with col2:
+            st.markdown("**🚗 Vehicle Expenses**")
+            st.write("Two methods:")
+            st.write("1. **Simplified mileage** (recommended):")
+            st.code("45p/mile (first 10,000)\n25p/mile (over 10,000)")
+            st.write("2. **Actual costs** (complex):")
+            st.write("- Claim business % of fuel, insurance, etc.")
+            st.write("- Need all receipts")
+
+    with tab2:
+        st.subheader("🚨 Common Mistakes to Avoid")
+
+        st.error("""
+        ### 1. Personal Expenses as Business
+        ❌ **WRONG:** Claiming supermarket shopping as business expense
+        ✅ **RIGHT:** Only claim if buying supplies for business (with receipts)
+        """)
+
+        st.error("""
+        ### 2. Commuting as Travel
+        ❌ **WRONG:** Claiming daily travel to your office/workplace
+        ✅ **RIGHT:** Only claim travel to client sites, meetings, different locations
+        """)
+
+        st.error("""
+        ### 3. Mixed Personal/Business
+        ❌ **WRONG:** Claiming 100% of home internet when used personally
+        ✅ **RIGHT:** Claim reasonable business proportion (e.g., 20-30%)
+        """)
+
+        st.error("""
+        ### 4. Entertainment
+        ❌ **WRONG:** Claiming meals with clients, coffee meetings
+        ✅ **RIGHT:** Only overnight accommodation and meals (if away on business)
+        """)
+
+        st.error("""
+        ### 5. Capital Allowances vs Depreciation
+        ❌ **WRONG:** Using "Depreciation" category
+        ✅ **RIGHT:** Use "Capital Allowances" for equipment purchases
+
+        HMRC uses Capital Allowances, not accounting depreciation.
+        Annual Investment Allowance (AIA): £1,000,000 for equipment.
+        """)
+
+        st.markdown("---")
+        st.info("""
+        💡 **Tip:** When in doubt, DON'T claim it. HMRC can investigate and charge penalties
+        for incorrect claims. It's better to miss a small deduction than face an investigation.
+        """)
+
+    with tab3:
+        st.subheader("📑 Record Keeping Requirements")
+
+        st.warning("""
+        **HMRC Requires You Keep Records for 5 YEARS**
+
+        From the 31 January submission deadline:
+        - 2024/25 return submitted by 31 Jan 2026
+        - Keep records until **31 Jan 2031**
+        """)
+
+        st.markdown("### What Records to Keep:")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.success("""
+            **Income Records:**
+            - All sales invoices
+            - Bank statements
+            - Till rolls/receipts
+            - Invoices you issue
+            - Payment records
+            - Cash books
+            """)
+
+        with col2:
+            st.success("""
+            **Expense Records:**
+            - All purchase receipts
+            - Bank statements
+            - Credit card statements
+            - Supplier invoices
+            - Mileage logs
+            - Expense claims
+            """)
+
+        st.markdown("### Receipt Requirements:")
+
+        st.info("""
+        - ✅ **Electronic receipts are acceptable** (emails, PDFs)
+        - ✅ **Photos of receipts are acceptable**
+        - ✅ **No original receipt needed** if you have electronic copy
+        - ⚠️ **Expenses >£100** - strongly recommend keeping receipts
+        - ⚠️ **Mileage** - must keep detailed log (date, from, to, miles, purpose)
+        """)
+
+        st.markdown("### Tax Helper Features:")
+        st.write("- 📎 Add receipt links to expense records")
+        st.write("- 📋 Export all records to Excel")
+        st.write("- 🗂️ Keep database file as backup")
+        st.write("- 💾 Regular backups recommended")
+
+    with tab4:
+        st.subheader("💷 Tax Calculation Verification")
+
+        st.markdown("### UK Tax Rates (2024/25) - Built into Tax Helper")
+
+        st.success("""
+        **Income Tax:**
+        - Personal Allowance: £12,570
+        - Basic Rate (20%): £12,571 - £50,270
+        - Higher Rate (40%): £50,271 - £125,140
+        - Additional Rate (45%): Above £125,140
+
+        **Personal Allowance Taper:**
+        - Reduces by £1 for every £2 over £100,000
+        """)
+
+        st.success("""
+        **National Insurance (Self-Employed):**
+
+        **Class 2 NI:**
+        - £3.45 per week (£179.40/year)
+        - Only if profits > £6,725
+
+        **Class 4 NI:**
+        - 6% on profits between £12,570 - £50,270
+        - 2% on profits above £50,270
+        """)
+
+        st.info("""
+        💡 **Tax Helper automatically calculates your estimated tax liability** on the Dashboard page.
+
+        The calculation uses the exact rates above and is verified against HMRC guidance.
+        """)
+
+        st.warning("""
+        ⚠️ **Important Notes:**
+
+        - The estimate is based ONLY on self-employment income/expenses in this app
+        - It does NOT include:
+          - Other income sources
+          - Pension contributions
+          - Gift Aid donations
+          - Marriage allowance
+          - Personal circumstances
+
+        Always verify with HMRC or accountant before filing.
+        """)
+
+    with tab5:
+        st.subheader("📚 Official HMRC Resources")
+
+        st.markdown("### Essential Links:")
+
+        st.markdown("""
+        - 🔗 [SA103 Form](https://www.gov.uk/self-assessment-forms-and-helpsheets) - Self-employment form
+        - 🔗 [Allowable Expenses Guide](https://www.gov.uk/expenses-if-youre-self-employed) - What you can claim
+        - 🔗 [Simplified Expenses](https://www.gov.uk/simpler-income-tax-simplified-expenses) - Home office, vehicle
+        - 🔗 [Capital Allowances](https://www.gov.uk/capital-allowances) - Equipment purchases
+        - 🔗 [Record Keeping](https://www.gov.uk/self-employed-records) - What to keep
+        - 🔗 [Self Assessment Deadlines](https://www.gov.uk/self-assessment-tax-returns/deadlines) - Important dates
+        """)
+
+        st.markdown("### HMRC Contact:")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.info("""
+            **📞 Self Assessment Helpline:**
+
+            0300 200 3310
+
+            Monday to Friday: 8am to 6pm
+            Closed weekends and bank holidays
+            """)
+
+        with col2:
+            st.info("""
+            **📱 HMRC App:**
+
+            Download from:
+            - Apple App Store
+            - Google Play Store
+
+            Features: View tax info, make payments
+            """)
+
+        st.markdown("### Important Dates (2024/25):")
+
+        st.warning("""
+        **Key Deadlines:**
+
+        - **6 April 2024** - Tax year starts
+        - **5 October 2024** - Register for Self Assessment (if new)
+        - **31 October 2024** - Paper return deadline
+        - **31 January 2025** - Online return deadline + payment due
+        - **31 July 2025** - Second payment on account due
+        - **5 April 2025** - Tax year ends
+
+        **Late Filing Penalties:**
+        - 1 day late: £100 fine
+        - 3 months late: Additional £10/day (max £900)
+        - 6 months late: Additional £300 or 5% of tax
+        - 12 months late: Additional £300 or 5% of tax
+        """)
+
+        st.markdown("---")
+        st.markdown("### Tax Helper Compliance:")
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            st.success("""
+            **✅ Verified Correct:**
+            - Tax rates 2024/25
+            - NI calculations
+            - Personal allowance
+            - Expense categories
+            - Income categories
+            """)
+
+        with col2:
+            st.info("""
+            **📋 User Responsibility:**
+            - Ensure expenses allowable
+            - Keep receipts 5 years
+            - Verify tax estimate
+            - File return on time
+            - Pay tax on time
+            """)
+
+        with col3:
+            st.warning("""
+            **⚠️ Seek Advice For:**
+            - Complex tax situations
+            - Multiple income sources
+            - Property income
+            - Dividend income
+            - Partnership income
+            """)
+
+
+# ============================================================================
+# PAGE: EXPORT
+# ============================================================================
+elif page == "Export":
+    st.title("📤 Export Data")
+    st.markdown("Generate Excel workbook with all your tax records")
+
+    # Get tax year dates
+    tax_year = settings.get('tax_year', '2024/25')
+    start_date, end_date = get_tax_year_dates(tax_year)
+
+    st.info(f"Export for Tax Year {tax_year}: {start_date.strftime('%d %B %Y')} to {end_date.strftime('%d %B %Y')}")
+
+    # Show record counts
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        income_count = session.query(func.count(Income.id)).filter(
+            and_(Income.date >= start_date, Income.date <= end_date)
+        ).scalar() or 0
+        st.metric("Income Records", income_count)
+
+    with col2:
+        expense_count = session.query(func.count(Expense.id)).filter(
+            and_(Expense.date >= start_date, Expense.date <= end_date)
+        ).scalar() or 0
+        st.metric("Expense Records", expense_count)
+
+    with col3:
+        mileage_count = session.query(func.count(Mileage.id)).filter(
+            and_(Mileage.date >= start_date, Mileage.date <= end_date)
+        ).scalar() or 0
+        st.metric("Mileage Records", mileage_count)
+
+    with col4:
+        donation_count = session.query(func.count(Donation.id)).filter(
+            and_(Donation.date >= start_date, Donation.date <= end_date)
+        ).scalar() or 0
+        st.metric("Donation Records", donation_count)
+
+    st.markdown("---")
+
+    # Export to Excel
+    st.subheader("Export to Excel")
+
+    export_filename = st.text_input("Filename", value=f"tax_records_{tax_year.replace('/', '_')}.xlsx")
+
+    if st.button("Generate Excel Export", type="primary"):
+        try:
+            export_path = os.path.join(os.path.dirname(__file__), export_filename)
+
+            models_dict = {
+                'Transaction': Transaction,
+                'Income': Income,
+                'Expense': Expense,
+                'Mileage': Mileage,
+                'Donation': Donation,
+                'Rule': Rule,
+                'Setting': Setting
+            }
+
+            export_to_excel(export_path, session, models_dict, settings)
+
+            st.success(f"Excel export created successfully!")
+            st.info(f"Saved to: {export_path}")
+
+            # Offer download
+            with open(export_path, 'rb') as f:
+                st.download_button(
+                    label="Download Excel File",
+                    data=f,
+                    file_name=export_filename,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
+        except Exception as e:
+            st.error(f"Error creating Excel export: {str(e)}")
+
+    st.markdown("---")
+
+    # CSV exports
+    st.subheader("Export Individual Tables as CSV")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("Export Income to CSV"):
+            income_records = session.query(Income).filter(
+                and_(Income.date >= start_date, Income.date <= end_date)
+            ).all()
+            data = []
+            for r in income_records:
+                data.append({
+                    'Date': r.date.strftime('%d/%m/%Y'),
+                    'Source': r.source,
+                    'Description': r.description or '',
+                    'Amount (Gross)': r.amount_gross,
+                    'Tax Deducted': r.tax_deducted,
+                    'Income Type': r.income_type,
+                    'Notes': r.notes or ''
+                })
+            df = pd.DataFrame(data)
+            csv = df.to_csv(index=False)
+            st.download_button("Download Income CSV", csv, f"income_{tax_year.replace('/', '_')}.csv", "text/csv")
+
+    with col2:
+        if st.button("Export Expenses to CSV"):
+            expense_records = session.query(Expense).filter(
+                and_(Expense.date >= start_date, Expense.date <= end_date)
+            ).all()
+            data = []
+            for r in expense_records:
+                data.append({
+                    'Date': r.date.strftime('%d/%m/%Y'),
+                    'Supplier': r.supplier,
+                    'Description': r.description or '',
+                    'Category': r.category,
+                    'Amount': r.amount,
+                    'Receipt Link': r.receipt_link or '',
+                    'Notes': r.notes or ''
+                })
+            df = pd.DataFrame(data)
+            csv = df.to_csv(index=False)
+            st.download_button("Download Expenses CSV", csv, f"expenses_{tax_year.replace('/', '_')}.csv", "text/csv")

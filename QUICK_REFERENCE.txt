@@ -1,0 +1,241 @@
+================================================================================
+COMPLIANCE REPORTS - QUICK REFERENCE CARD
+================================================================================
+
+INSTALLATION
+------------
+cd "/Users/anthony/Tax Helper"
+pip install -r requirements_reports.txt
+
+QUICK TEST
+----------
+python examples/generate_sample_reports.py
+
+VIEW REPORTS
+------------
+open reports/
+
+================================================================================
+7 REPORT TYPES
+================================================================================
+
+1. AUDIT TRAIL REPORT (PDF/CSV/Excel)
+   - Complete change history for HMRC
+   - Before/after values, timestamps
+   - Methodology documentation
+
+2. RECEIPT SUMMARY (PDF/CSV/Excel)
+   - Receipts organized by category
+   - Category totals and counts
+   - Receipt file references
+
+3. CATEGORIZATION REPORT (PDF)
+   - Auto vs. manual breakdown
+   - Confidence score analysis
+   - Top merchants, category stats
+
+4. HIGH CONFIDENCE TRANSACTIONS (CSV)
+   - Confidence >= 70% (default)
+   - Ready for HMRC submission
+   - All transaction details
+
+5. REQUIRES REVIEW REPORT (CSV)
+   - Confidence < 40% (default)
+   - Needs manual verification
+   - Flagged with reasons
+
+6. SA103S EXPORT (CSV)
+   - HMRC Self-Assessment format
+   - Box 17-29 mapping
+   - Copy/paste to HMRC form
+
+7. COMPLETE EXCEL WORKBOOK
+   - 6 sheets: Summary, Income, Expenses, Transactions, Audit, Receipts
+   - Professional formatting
+   - Formulas and totals
+
+================================================================================
+QUICK INTEGRATION
+================================================================================
+
+MAIN MENU
+---------
+from components.reports_ui import reports_main_menu
+
+print("  9. Generate Compliance Reports")
+if choice == '9':
+    reports_main_menu(session)
+
+QUICK ACCESS
+------------
+from components.reports_ui import (
+    quick_audit_trail,
+    quick_sa103s_export,
+    quick_excel_workbook
+)
+
+filepath = quick_audit_trail(session)
+filepath = quick_sa103s_export(session)
+filepath = quick_excel_workbook(session)
+
+================================================================================
+BASIC USAGE
+================================================================================
+
+from components.compliance_reports import *
+
+# Get tax year dates
+start, end = get_tax_year_dates("2024/25")
+
+# Generate reports
+audit = generate_audit_trail_report(session, start, end, 'PDF')
+receipts = generate_receipt_summary(session, start, end, 'PDF')
+categorization = generate_categorization_report(session, start, end)
+high_conf = generate_high_confidence_report(session, start, end, 70)
+review = generate_requires_review_report(session, start, end, 40)
+sa103s = export_sa103s_format(session, start, end)
+workbook = generate_excel_workbook(session, start, end)
+
+================================================================================
+HMRC SUBMISSION WORKFLOW
+================================================================================
+
+1. REVIEW
+   review_file = generate_requires_review_report(session, start, end, 40)
+   # Fix all flagged transactions
+
+2. VERIFY
+   high_conf = generate_high_confidence_report(session, start, end, 70)
+   # Check >= 95% high confidence
+
+3. EXPORT
+   sa103s = export_sa103s_format(session, start, end)
+   # Copy to HMRC form
+
+4. ARCHIVE
+   audit = generate_audit_trail_report(session, start, end, 'PDF')
+   workbook = generate_excel_workbook(session, start, end)
+   # Keep 5+ years
+
+================================================================================
+SA103S BOX MAPPING
+================================================================================
+
+Box 17: Cost of goods
+Box 18: Travel expenses → Travel, Mileage, Fuel, Parking
+Box 19: Staff costs
+Box 20: Premises → Rent, Insurance, Utilities
+Box 21: Repairs → Equipment, Repairs, Maintenance
+Box 22: Office costs → Office, Phone, Internet, Stationery
+Box 23: Marketing → Marketing, Advertising, Entertainment
+Box 24: Loan interest
+Box 25: Finance charges → Bank charges
+Box 26: Bad debts
+Box 27: Professional fees → Accountancy, Legal
+Box 28: Depreciation
+Box 29: Other → Everything else
+
+================================================================================
+FILE LOCATIONS
+================================================================================
+
+Core:           /Users/anthony/Tax Helper/components/compliance_reports.py
+UI:             /Users/anthony/Tax Helper/components/reports_ui.py
+Example:        /Users/anthony/Tax Helper/examples/generate_sample_reports.py
+Reports:        /Users/anthony/Tax Helper/reports/
+Dependencies:   /Users/anthony/Tax Helper/requirements_reports.txt
+
+Documentation:
+  Quick Start:      REPORTS_README.md
+  Integration:      COMPLIANCE_REPORTS_INTEGRATION.md
+  Format Reference: REPORT_FORMATS_REFERENCE.md
+  Summary:          COMPLIANCE_REPORTS_SUMMARY.md
+  This Card:        QUICK_REFERENCE.txt
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+MODULE NOT FOUND
+----------------
+pip install reportlab openpyxl pandas
+
+EMPTY REPORTS
+-------------
+# Check transactions exist
+count = session.query(Transaction).filter(
+    Transaction.date.between(start, end)
+).count()
+print(f"Found {count} transactions")
+
+PERMISSION DENIED
+-----------------
+chmod 755 reports/
+
+TEST WITH SAMPLE DATA
+---------------------
+python examples/generate_sample_reports.py
+
+================================================================================
+DEPENDENCIES
+================================================================================
+
+reportlab>=4.0.0    # PDF generation
+openpyxl>=3.1.0     # Excel workbooks
+pandas>=2.0.0       # CSV exports
+sqlalchemy>=2.0.0   # Database queries
+
+================================================================================
+FILE NAMING
+================================================================================
+
+Format: {report_type}_{tax_year}_{timestamp}.{ext}
+
+Examples:
+  audit_trail_2024_25_20241017_143022.pdf
+  receipt_summary_2024_25_20241017_143045.pdf
+  sa103s_export_2024_25_20241017_143215.csv
+  complete_workbook_2024_25_20241017_143237.xlsx
+
+================================================================================
+TYPICAL FILE SIZES (1,000 transactions)
+================================================================================
+
+Audit Trail (PDF):        200-500 KB
+Receipt Summary (PDF):    150-300 KB
+Categorization (PDF):     100-200 KB
+High Confidence (CSV):    30-80 KB
+Requires Review (CSV):    5-20 KB
+SA103S Export (CSV):      1-3 KB
+Complete Workbook (Excel): 200-600 KB
+
+================================================================================
+SUPPORT
+================================================================================
+
+1. Read REPORTS_README.md for quick start
+2. Read COMPLIANCE_REPORTS_INTEGRATION.md for full docs
+3. Read REPORT_FORMATS_REFERENCE.md for examples
+4. Run examples/generate_sample_reports.py for testing
+
+================================================================================
+FEATURES CHECKLIST
+================================================================================
+
+[✓] 7 report types
+[✓] PDF, CSV, Excel formats
+[✓] HMRC SA103S compatible
+[✓] Professional PDF formatting
+[✓] Multi-sheet Excel workbooks
+[✓] UK tax year support (6 Apr - 5 Apr)
+[✓] Interactive UI
+[✓] Batch generation
+[✓] Report archiving
+[✓] MTD compliant
+[✓] Complete documentation
+[✓] Sample data generator
+[✓] Integration examples
+
+================================================================================
+END OF QUICK REFERENCE
+================================================================================

@@ -1,0 +1,107 @@
+HOW TO PACKAGE TAX HELPER FOR JEMMA'S LAPTOP
+==============================================
+
+Follow these steps to prepare the Tax Helper application for installation on Jemma's laptop:
+
+STEP 1: PREPARE THE FILES
+--------------------------
+Copy the entire "Tax Helper" folder to a USB drive or cloud storage.
+
+Essential files to include:
+✓ app.py
+✓ models.py
+✓ requirements.txt
+✓ INSTALL.bat (for Windows)
+✓ INSTALL.sh (for Mac/Linux)
+✓ RUN.bat (for Windows)
+✓ RUN.sh (for Mac/Linux)
+✓ README.md
+✓ UK_TAX_COMPLIANCE.md
+✓ UK_TAX_COMPLIANCE_SUMMARY.md
+✓ FEATURES_IMPLEMENTED.md
+
+Files to EXCLUDE (if present):
+✗ tax_helper.db (this is your personal data - Jemma needs a fresh start)
+✗ tax_helper.db-* (database backups)
+✗ .DS_Store (Mac system files)
+✗ __pycache__ (Python cache folders)
+✗ .streamlit/secrets.toml (if you have any secrets)
+
+STEP 2: CREATE A ZIP FILE (RECOMMENDED)
+----------------------------------------
+1. Select the "Tax Helper" folder
+2. Right-click and choose "Compress" (Mac) or "Send to > Compressed folder" (Windows)
+3. This creates "Tax Helper.zip"
+4. Transfer this ZIP file via:
+   - USB drive
+   - Email (if under 25MB)
+   - Cloud storage (Google Drive, Dropbox, iCloud)
+   - AirDrop (Mac to Mac)
+
+STEP 3: INSTALLATION ON JEMMA'S LAPTOP
+---------------------------------------
+1. Transfer the ZIP file to Jemma's laptop
+2. Extract/unzip the folder to a convenient location (e.g., Documents folder)
+3. Have Jemma follow the instructions in README.md:
+
+   For Windows:
+   - Double-click INSTALL.bat
+   - After installation completes, double-click RUN.bat
+
+   For Mac:
+   - Open Terminal, navigate to the folder
+   - Run: chmod +x INSTALL.sh RUN.sh
+   - Run: ./INSTALL.sh
+   - Then: ./RUN.sh
+
+STEP 4: VERIFY INSTALLATION
+----------------------------
+1. The browser should open automatically to http://localhost:8501
+2. You should see the Tax Helper Dashboard
+3. Try importing a test CSV file to verify everything works
+4. Check that the app creates a fresh tax_helper.db file
+
+TROUBLESHOOTING TIPS FOR JEMMA
+-------------------------------
+If Python is not installed:
+- Download from: https://www.python.org/downloads/
+- IMPORTANT: Check "Add Python to PATH" during installation on Windows
+
+If installation fails:
+- Try running INSTALL.bat/INSTALL.sh again
+- Check internet connection (needed to download dependencies)
+
+If app won't start:
+- Check that port 8501 is not already in use
+- Try restarting the computer
+
+QUICK COMMAND REFERENCE
+------------------------
+Windows:
+  Install: Double-click INSTALL.bat
+  Run: Double-click RUN.bat
+
+Mac/Linux:
+  Install: ./INSTALL.sh
+  Run: ./RUN.sh
+
+NOTES
+-----
+- The database (tax_helper.db) will be created automatically when Jemma first runs the app
+- Each person should have their own separate Tax Helper folder with their own database
+- The app runs completely offline after installation (except when installing dependencies)
+- All data is stored locally on the computer
+
+SUPPORT
+-------
+Refer to README.md for:
+- Detailed usage instructions
+- Monthly workflow guide
+- HMRC compliance information
+- FAQ and troubleshooting
+
+Refer to UK_TAX_COMPLIANCE.md for:
+- Detailed HMRC guidance
+- Allowable vs non-allowable expenses
+- Tax year information
+- Record keeping requirements

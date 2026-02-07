@@ -1,0 +1,171 @@
+{
+  "name": "Tax Helper - AI Tax Transaction Classifier",
+  "short_name": "TaxHelper",
+  "description": "AI-powered tax transaction classifier and analyzer. Automatically categorize business vs personal expenses, generate tax reports, and manage receipts.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "dir": "ltr",
+  "lang": "en-US",
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "finance",
+    "productivity",
+    "business",
+    "utilities"
+  ],
+  "shortcuts": [
+    {
+      "name": "Review Transactions",
+      "short_name": "Review",
+      "description": "Review and classify your transactions",
+      "url": "/?page=review",
+      "icons": [
+        {
+          "src": "/icons/review-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Add Transaction",
+      "short_name": "Add",
+      "description": "Manually add a new transaction",
+      "url": "/?page=add",
+      "icons": [
+        {
+          "src": "/icons/add-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Upload Receipt",
+      "short_name": "Upload",
+      "description": "Upload and scan a receipt",
+      "url": "/?page=upload",
+      "icons": [
+        {
+          "src": "/icons/upload-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Tax Reports",
+      "short_name": "Reports",
+      "description": "View tax reports and summaries",
+      "url": "/?page=reports",
+      "icons": [
+        {
+          "src": "/icons/reports-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-dashboard.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Dashboard view on desktop"
+    },
+    {
+      "src": "/screenshots/desktop-transactions.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Transaction review on desktop"
+    },
+    {
+      "src": "/screenshots/mobile-home.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Home screen on mobile"
+    },
+    {
+      "src": "/screenshots/mobile-transactions.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Transaction cards on mobile"
+    },
+    {
+      "src": "/screenshots/mobile-swipe.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Swipe gestures on mobile"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "iarc_rating_id": "",
+  "features": [
+    "AI-powered transaction classification",
+    "Receipt scanning and OCR",
+    "Tax report generation",
+    "Offline support",
+    "Touch gestures",
+    "Mobile-optimized interface"
+  ]
+}
