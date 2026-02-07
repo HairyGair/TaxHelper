@@ -37,8 +37,13 @@ from models import (
 # CONFIGURATION
 # ============================================================================
 
-REPORTS_DIR = Path("/Users/anthony/Tax Helper/reports")
-REPORTS_DIR.mkdir(exist_ok=True)
+REPORTS_DIR = Path(__file__).resolve().parent.parent / "reports"
+try:
+    REPORTS_DIR.mkdir(exist_ok=True)
+except OSError:
+    # On Streamlit Cloud, use a writable temp directory
+    REPORTS_DIR = Path("/tmp/taxhelper_reports")
+    REPORTS_DIR.mkdir(exist_ok=True)
 
 # Tax year boundaries (UK: 6 April to 5 April)
 def get_tax_year_dates(tax_year: str) -> Tuple[datetime, datetime]:
