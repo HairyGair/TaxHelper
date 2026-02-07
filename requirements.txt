@@ -6,7 +6,7 @@
 # ============================================================
 
 # Web Framework
-streamlit==1.31.1
+streamlit>=1.31.1
 
 # Data Processing
 pandas>=2.0.0
@@ -17,8 +17,12 @@ sqlalchemy>=2.0.0
 # Date/Time Handling
 python-dateutil>=2.8.0
 
+# Charts & Visualization
+plotly>=5.18.0
+
 # Additional Streamlit dependencies
 altair>=5.0.0
+numpy>=1.24.0
 pillow>=10.0.0
 watchdog>=3.0.0
 
@@ -58,11 +62,11 @@ pytesseract>=0.3.10
 # google-cloud-vision>=3.4.0
 
 # ============================================================
-# BUILD & DEPLOYMENT DEPENDENCIES
+# BUILD & DEPLOYMENT DEPENDENCIES (local only, not for cloud)
 # ============================================================
 
 # Build Tool (for creating standalone executable)
-pyinstaller>=6.0.0
+# pyinstaller>=6.0.0
 
 # ============================================================
 # DEVELOPMENT & TESTING DEPENDENCIES (Optional)
