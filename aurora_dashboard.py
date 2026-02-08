@@ -249,7 +249,7 @@ def render_aurora_dashboard(session, settings):
                 <div style="
                     width: 20px;
                     height: {income_height}px;
-                    background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+                    background: linear-gradient(180deg, #36c7a0 0%, #059669 100%);
                     border-radius: 4px 4px 0 0;
                     transition: all 0.3s ease;
                     cursor: pointer;
@@ -257,7 +257,7 @@ def render_aurora_dashboard(session, settings):
                 <div style="
                     width: 20px;
                     height: {expense_height}px;
-                    background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+                    background: linear-gradient(180deg, #e07a5f 0%, #dc2626 100%);
                     border-radius: 4px 4px 0 0;
                     transition: all 0.3s ease;
                     cursor: pointer;
@@ -271,11 +271,11 @@ def render_aurora_dashboard(session, settings):
         </div>
         <div style="display: flex; gap: 2rem; margin-top: 1.5rem; justify-content: center;">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <div style="width: 20px; height: 10px; background: linear-gradient(90deg, #10b981 0%, #059669 100%); border-radius: 2px;"></div>
+                <div style="width: 20px; height: 10px; background: linear-gradient(90deg, #36c7a0 0%, #059669 100%); border-radius: 2px;"></div>
                 <span style="color: rgba(255, 255, 255, 0.7); font-size: 0.875rem;">Income</span>
             </div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <div style="width: 20px; height: 10px; background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); border-radius: 2px;"></div>
+                <div style="width: 20px; height: 10px; background: linear-gradient(90deg, #e07a5f 0%, #dc2626 100%); border-radius: 2px;"></div>
                 <span style="color: rgba(255, 255, 255, 0.7); font-size: 0.875rem;">Expenses</span>
             </div>
         </div>
@@ -297,14 +297,14 @@ def render_aurora_dashboard(session, settings):
         st.markdown("""
         <a href="#" style="text-decoration: none;">
         <div style="
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, transparent 100%);
+            background: linear-gradient(135deg, rgba(54, 199, 160, 0.1) 0%, transparent 100%);
             border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 16px;
             padding: 1.5rem;
             text-align: center;
             transition: all 0.3s ease;
             cursor: pointer;
-        " onmouseover="this.style.transform='translateY(-4px)'; this.style.borderColor='rgba(16, 185, 129, 0.3)'" onmouseout="this.style.transform=''; this.style.borderColor='rgba(255, 255, 255, 0.06)'">
+        " onmouseover="this.style.transform='translateY(-4px)'; this.style.borderColor='rgba(54, 199, 160, 0.3)'" onmouseout="this.style.transform=''; this.style.borderColor='rgba(255, 255, 255, 0.06)'">
             <div style="font-size: 2rem; margin-bottom: 0.5rem;">💰</div>
             <div style="color: rgba(255, 255, 255, 0.9); font-weight: 500;">Add Income</div>
         </div>
@@ -315,14 +315,14 @@ def render_aurora_dashboard(session, settings):
         st.markdown("""
         <a href="#" style="text-decoration: none;">
         <div style="
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, transparent 100%);
+            background: linear-gradient(135deg, rgba(224, 122, 95, 0.1) 0%, transparent 100%);
             border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 16px;
             padding: 1.5rem;
             text-align: center;
             transition: all 0.3s ease;
             cursor: pointer;
-        " onmouseover="this.style.transform='translateY(-4px)'; this.style.borderColor='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.transform=''; this.style.borderColor='rgba(255, 255, 255, 0.06)'">
+        " onmouseover="this.style.transform='translateY(-4px)'; this.style.borderColor='rgba(224, 122, 95, 0.3)'" onmouseout="this.style.transform=''; this.style.borderColor='rgba(255, 255, 255, 0.06)'">
             <div style="font-size: 2rem; margin-bottom: 0.5rem;">💸</div>
             <div style="color: rgba(255, 255, 255, 0.9); font-weight: 500;">Add Expense</div>
         </div>

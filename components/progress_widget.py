@@ -209,7 +209,7 @@ def render_sidebar_badge(session):
     # Determine badge color and icon
     if completion >= 100:
         icon = "✅"
-        color = "#28a745"  # Green
+        color = "#36c7a0"  # Green
         status = "Complete"
     elif completion >= 75:
         icon = "🟢"
@@ -217,7 +217,7 @@ def render_sidebar_badge(session):
         status = "Almost Done"
     elif completion >= 50:
         icon = "🟡"
-        color = "#ffc107"  # Yellow
+        color = "#e5b567"  # Yellow
         status = "In Progress"
     elif completion >= 25:
         icon = "🟠"
@@ -225,7 +225,7 @@ def render_sidebar_badge(session):
         status = "Started"
     else:
         icon = "🔴"
-        color = "#dc3545"  # Red
+        color = "#e07a5f"  # Red
         status = "Just Started"
 
     # Render badge
@@ -252,7 +252,7 @@ def adjust_color(hex_color, percent):
     Adjust hex color brightness by percentage
 
     Args:
-        hex_color: Hex color string (e.g., "#28a745")
+        hex_color: Hex color string (e.g., "#36c7a0")
         percent: Brightness adjustment (-100 to 100)
 
     Returns:

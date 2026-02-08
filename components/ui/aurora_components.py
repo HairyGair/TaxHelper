@@ -121,14 +121,14 @@ def create_aurora_metric_card(label, value, change="", icon="", color="purple"):
     """
     color_map = {
         "purple": {"primary": "#8b5cf6", "secondary": "#a78bfa", "light": "rgba(139, 92, 246, 0.2)"},
-        "blue": {"primary": "#3b82f6", "secondary": "#60a5fa", "light": "rgba(59, 130, 246, 0.2)"},
-        "green": {"primary": "#10b981", "secondary": "#34d399", "light": "rgba(16, 185, 129, 0.2)"},
+        "blue": {"primary": "#3b82f6", "secondary": "#7aafff", "light": "rgba(59, 130, 246, 0.2)"},
+        "green": {"primary": "#36c7a0", "secondary": "#36c7a0", "light": "rgba(54, 199, 160, 0.2)"},
         "pink": {"primary": "#ec4899", "secondary": "#f472b6", "light": "rgba(236, 72, 153, 0.2)"},
-        "orange": {"primary": "#f59e0b", "secondary": "#fbbf24", "light": "rgba(245, 158, 11, 0.2)"}
+        "orange": {"primary": "#e5b567", "secondary": "#e5b567", "light": "rgba(245, 158, 11, 0.2)"}
     }
 
     colors = color_map.get(color, color_map["purple"])
-    change_color = colors["primary"] if change.startswith("+") else "#ef4444"
+    change_color = colors["primary"] if change.startswith("+") else "#e07a5f"
     change_arrow = "↑" if change.startswith("+") else "↓" if change.startswith("-") else ""
 
     html = f"""
@@ -232,8 +232,8 @@ def create_aurora_data_card(title, amount, subtitle, category):
     """
     # Determine color based on amount
     is_positive = not amount.startswith("-")
-    amount_color = "#10b981" if is_positive else "#ef4444"
-    category_gradient = "linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)" if is_positive else "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)"
+    amount_color = "#36c7a0" if is_positive else "#e07a5f"
+    category_gradient = "linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)" if is_positive else "linear-gradient(135deg, #e5b567 0%, #e07a5f 100%)"
 
     html = f"""
     <div style="
@@ -497,8 +497,8 @@ def create_transaction_card(transaction_data):
     amount = transaction_data.get("amount", 0)
     is_income = amount > 0
     amount_str = f"+${abs(amount):,.2f}" if is_income else f"-${abs(amount):,.2f}"
-    amount_color = "#10b981" if is_income else "#ef4444"
-    bg_gradient = "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.04) 100%)" if is_income else "linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(220, 38, 38, 0.04) 100%)"
+    amount_color = "#36c7a0" if is_income else "#e07a5f"
+    bg_gradient = "linear-gradient(135deg, rgba(54, 199, 160, 0.08) 0%, rgba(5, 150, 105, 0.04) 100%)" if is_income else "linear-gradient(135deg, rgba(224, 122, 95, 0.08) 0%, rgba(220, 38, 38, 0.04) 100%)"
 
     html = f"""
     <style>
@@ -710,8 +710,8 @@ def create_aurora_stat_pill(label, value, color="purple"):
     """
     color_map = {
         "purple": "linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)",
-        "blue": "linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)",
-        "green": "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
+        "blue": "linear-gradient(135deg, #3b82f6 0%, #7aafff 100%)",
+        "green": "linear-gradient(135deg, #36c7a0 0%, #36c7a0 100%)",
         "pink": "linear-gradient(135deg, #ec4899 0%, #f472b6 100%)"
     }
 

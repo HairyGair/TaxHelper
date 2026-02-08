@@ -71,7 +71,7 @@ def verify_aurora_theme():
                         ('Aurora gradients', 'linear-gradient' in page_content),
                         ('Purple color (#8b5cf6)', '#8b5cf6' in page_content or '139, 92, 246' in page_content),
                         ('Blue color (#3b82f6)', '#3b82f6' in page_content or '59, 130, 246' in page_content),
-                        ('Green color (#10b981)', '#10b981' in page_content or '16, 185, 129' in page_content),
+                        ('Green color (#36c7a0)', '#36c7a0' in page_content or '16, 185, 129' in page_content),
                     ]
 
                     print("\nAurora Theme Element Checks:")

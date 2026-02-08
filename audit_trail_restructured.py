@@ -28,19 +28,30 @@ def render_restructured_audit_trail_screen(session, settings):
     Render a completely restructured audit trail interface with modern design
     """
 
-    # Custom CSS for modern audit trail interface - Orange gradient theme
+    # Custom CSS for modern audit trail interface - Obsidian dark theme
     st.markdown("""
     <style>
-    /* Audit Trail Specific Styling - Orange Theme */
-    .audit-header {
-        background: linear-gradient(135deg, #ff9500 0%, #ff6b00 50%, #ff3d00 100%);
-        color: white;
+    /* Audit Trail Specific Styling - Obsidian Theme */
+    .ob-hero {
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
+        color: #c8cdd5;
         padding: 3rem 2rem;
         border-radius: 24px;
         margin-bottom: 2rem;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 20px 60px rgba(255, 149, 0, 0.3);
+        box-shadow: 0 20px 60px rgba(79, 143, 234, 0.3);
+    }
+
+    .audit-header {
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
+        color: #c8cdd5;
+        padding: 3rem 2rem;
+        border-radius: 24px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(79, 143, 234, 0.3);
     }
 
     .audit-header::before {
@@ -71,31 +82,31 @@ def render_restructured_audit_trail_screen(session, settings):
     }
 
     .status-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 16px;
         padding: 1.5rem;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        border: 1px solid #f0f0f0;
+        border: 1px solid rgba(79, 143, 234, 0.12);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         height: 100%;
     }
 
     .status-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 30px rgba(255, 149, 0, 0.15);
+        box-shadow: 0 8px 30px rgba(79, 143, 234, 0.15);
     }
 
     .metric-value {
         font-size: 2.5rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #ff9500 0%, #ff6b00 50%, #ff3d00 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #f4c430 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin: 0.5rem 0;
     }
 
     .metric-label {
-        color: #64748b;
+        color: rgba(200, 205, 213, 0.38);
         font-size: 0.875rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -104,7 +115,7 @@ def render_restructured_audit_trail_screen(session, settings):
     }
 
     .audit-card {
-        background: white;
+        background: #181d28;
         border-radius: 16px;
         padding: 1.5rem;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08);
@@ -121,23 +132,23 @@ def render_restructured_audit_trail_screen(session, settings):
     }
 
     .audit-card.create {
-        border-left-color: #10b981;
-        background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+        border-left-color: #36c7a0;
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
     }
 
     .audit-card.update {
-        border-left-color: #f59e0b;
-        background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
+        border-left-color: #4f8fea;
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
     }
 
     .audit-card.delete {
-        border-left-color: #ef4444;
-        background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+        border-left-color: #e07a5f;
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
     }
 
     .audit-card.bulk_update {
-        border-left-color: #8b5cf6;
-        background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%);
+        border-left-color: #4f8fea;
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
     }
 
     .action-badge {
@@ -170,15 +181,15 @@ def render_restructured_audit_trail_screen(session, settings):
     }
 
     .filter-section {
-        background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+        background: #181d28;
         border-radius: 16px;
         padding: 1.5rem;
         margin: 2rem 0;
-        border: 2px solid #fdba74;
+        border: 2px solid rgba(79, 143, 234, 0.12);
     }
 
     .analytics-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 20px;
         padding: 2rem;
         box-shadow: 0 10px 40px rgba(0,0,0,0.08);
@@ -186,7 +197,7 @@ def render_restructured_audit_trail_screen(session, settings):
     }
 
     .timeline-item {
-        background: white;
+        background: #181d28;
         border-radius: 12px;
         padding: 1rem;
         margin-bottom: 0.75rem;
@@ -200,11 +211,11 @@ def render_restructured_audit_trail_screen(session, settings):
     }
 
     .detail-view {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
         border-radius: 12px;
         padding: 1.5rem;
         margin: 1rem 0;
-        border: 1px solid #e2e8f0;
+        border: 1px solid rgba(79, 143, 234, 0.12);
     }
 
     .value-comparison {
@@ -215,18 +226,18 @@ def render_restructured_audit_trail_screen(session, settings):
     }
 
     .value-box {
-        background: white;
+        background: #181d28;
         border-radius: 8px;
         padding: 1rem;
-        border: 2px solid #e2e8f0;
+        border: 2px solid rgba(79, 143, 234, 0.12);
     }
 
     .empty-state {
         text-align: center;
         padding: 4rem 2rem;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
         border-radius: 20px;
-        border: 2px dashed #cbd5e1;
+        border: 2px dashed rgba(79, 143, 234, 0.12);
     }
 
     .empty-state-icon {
@@ -238,7 +249,7 @@ def render_restructured_audit_trail_screen(session, settings):
     .undo-button {
         background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
         color: #991b1b;
-        border: 2px solid #f87171;
+        border: 2px solid #e07a5f;
         border-radius: 12px;
         padding: 0.75rem 1.5rem;
         font-weight: 600;
@@ -262,18 +273,12 @@ def render_restructured_audit_trail_screen(session, settings):
     """, unsafe_allow_html=True)
 
     # ============================================================================
-    # HEADER SECTION with orange gradient and floating orbs
+    # HEADER SECTION with Obsidian theme
     # ============================================================================
     st.markdown("""
-    <div class="audit-header">
-        <div style="position: relative; z-index: 1;">
-            <h1 style="margin: 0; font-size: 3rem; font-weight: 800;">
-                Audit Trail & History
-            </h1>
-            <p style="margin: 1rem 0 0 0; font-size: 1.2rem; opacity: 0.95;">
-                Track all changes, view history, and undo actions with confidence
-            </p>
-        </div>
+    <div class="ob-hero">
+        <h1>Audit Trail & History</h1>
+        <p>Track all changes, view history, and undo actions with confidence</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -311,7 +316,7 @@ def render_restructured_audit_trail_screen(session, settings):
         <div class="status-card">
             <div class="metric-label">Total Actions</div>
             <div class="metric-value">{total_actions:,}</div>
-            <div style="color: #ff6b00; font-size: 0.875rem; margin-top: 0.5rem;">
+            <div style="color: #4f8fea; font-size: 0.875rem; margin-top: 0.5rem;">
                 All time history
             </div>
         </div>
@@ -322,11 +327,11 @@ def render_restructured_audit_trail_screen(session, settings):
         <div class="status-card">
             <div class="metric-label">Recent Activity</div>
             <div class="metric-value" style="
-                background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+                background: linear-gradient(135deg, #7aafff 0%, #8b5cf6 100%);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
             ">{recent_count}</div>
-            <div style="color: #3b82f6; font-size: 0.875rem; margin-top: 0.5rem;">
+            <div style="color: #7aafff; font-size: 0.875rem; margin-top: 0.5rem;">
                 Last 24 hours
             </div>
         </div>
@@ -337,11 +342,11 @@ def render_restructured_audit_trail_screen(session, settings):
         <div class="status-card">
             <div class="metric-label">Modifications</div>
             <div class="metric-value" style="
-                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                background: linear-gradient(135deg, #e5b567 0%, #e5b567 100%);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
             ">{update_count}</div>
-            <div style="color: #f59e0b; font-size: 0.875rem; margin-top: 0.5rem;">
+            <div style="color: #e5b567; font-size: 0.875rem; margin-top: 0.5rem;">
                 Updates made
             </div>
         </div>
@@ -352,11 +357,11 @@ def render_restructured_audit_trail_screen(session, settings):
         <div class="status-card">
             <div class="metric-label">Can Undo</div>
             <div class="metric-value" style="
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                background: linear-gradient(135deg, #36c7a0 0%, #36c7a0 100%);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
             ">{total_actions}</div>
-            <div style="color: #10b981; font-size: 0.875rem; margin-top: 0.5rem;">
+            <div style="color: #36c7a0; font-size: 0.875rem; margin-top: 0.5rem;">
                 Actions available
             </div>
         </div>
@@ -458,13 +463,13 @@ def render_restructured_audit_trail_screen(session, settings):
 
             st.markdown(f"""
             <div style="
-                background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-                border-left: 4px solid #3b82f6;
+                background: #181d28;
+                border-left: 4px solid #4f8fea;
                 padding: 1rem;
                 border-radius: 12px;
                 margin-bottom: 1.5rem;
             ">
-                <strong style="color: #1e40af;">Showing {showing_from} - {showing_to} of {total_count} actions</strong>
+                <strong style="color: #c8cdd5;">Showing {showing_from} - {showing_to} of {total_count} actions</strong>
             </div>
             """, unsafe_allow_html=True)
 
@@ -473,11 +478,11 @@ def render_restructured_audit_trail_screen(session, settings):
             st.markdown("""
             <div class="empty-state">
                 <div class="empty-state-icon">📜</div>
-                <h2 style="color: #1f2937; margin-bottom: 0.5rem;">No Audit Entries Found</h2>
-                <p style="color: #64748b; font-size: 1.1rem;">
+                <h2 style="color: #c8cdd5; margin-bottom: 0.5rem;">No Audit Entries Found</h2>
+                <p style="color: rgba(200, 205, 213, 0.65); font-size: 1.1rem;">
                     No actions match your current filters
                 </p>
-                <p style="color: #94a3b8; margin-top: 1rem;">
+                <p style="color: rgba(200, 205, 213, 0.38); margin-top: 1rem;">
                     Try adjusting your filters or clearing them to see all actions
                 </p>
             </div>
@@ -518,18 +523,18 @@ def render_restructured_audit_trail_screen(session, settings):
                         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
                             <div>
                                 <span class="action-badge {badge_class}">{log.action_type}</span>
-                                <div style="margin-top: 0.5rem; color: #64748b;">
+                                <div style="margin-top: 0.5rem; color: rgba(200, 205, 213, 0.65);">
                                     <strong>Record:</strong> {log.record_type} #{log.record_id}
                                 </div>
                             </div>
-                            <div style="text-align: right; color: #94a3b8; font-size: 0.875rem;">
+                            <div style="text-align: right; color: rgba(200, 205, 213, 0.38); font-size: 0.875rem;">
                                 {log.timestamp.strftime('%d %B %Y')}<br>
                                 {log.timestamp.strftime('%H:%M:%S')}
                             </div>
                         </div>
-                        <div style="background: rgba(255,255,255,0.5); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
-                            <strong style="color: #1f2937;">Changes:</strong><br>
-                            <span style="color: #64748b;">{log.changes_summary}</span>
+                        <div style="background: rgba(18, 22, 31, 0.5); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                            <strong style="color: #c8cdd5;">Changes:</strong><br>
+                            <span style="color: rgba(200, 205, 213, 0.65);">{log.changes_summary}</span>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -543,12 +548,12 @@ def render_restructured_audit_trail_screen(session, settings):
                         with col_old:
                             st.markdown("""
                             <div style="
-                                background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+                                background: #181d28;
                                 border-radius: 12px;
                                 padding: 1rem;
-                                border: 2px solid #fca5a5;
+                                border: 2px solid rgba(79, 143, 234, 0.12);
                             ">
-                                <h4 style="margin: 0 0 0.5rem 0; color: #991b1b;">Before</h4>
+                                <h4 style="margin: 0 0 0.5rem 0; color: #e07a5f;">Before</h4>
                             """, unsafe_allow_html=True)
 
                             if log.old_values:
@@ -563,12 +568,12 @@ def render_restructured_audit_trail_screen(session, settings):
                         with col_new:
                             st.markdown("""
                             <div style="
-                                background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+                                background: #181d28;
                                 border-radius: 12px;
                                 padding: 1rem;
-                                border: 2px solid #6ee7b7;
+                                border: 2px solid rgba(79, 143, 234, 0.12);
                             ">
-                                <h4 style="margin: 0 0 0.5rem 0; color: #065f46;">After</h4>
+                                <h4 style="margin: 0 0 0.5rem 0; color: #36c7a0;">After</h4>
                             """, unsafe_allow_html=True)
 
                             if log.new_values:
@@ -634,11 +639,11 @@ def render_restructured_audit_trail_screen(session, settings):
                     <div style="
                         text-align: center;
                         padding: 0.5rem;
-                        background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+                        background: #181d28;
                         border-radius: 8px;
-                        border: 2px solid #fdba74;
+                        border: 2px solid rgba(79, 143, 234, 0.12);
                     ">
-                        <strong style="color: #c2410c;">Page {st.session_state.audit_page + 1} of {total_pages}</strong>
+                        <strong style="color: #4f8fea;">Page {st.session_state.audit_page + 1} of {total_pages}</strong>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -682,9 +687,9 @@ def render_restructured_audit_trail_screen(session, settings):
 
             with col1:
                 st.markdown(f"""
-                <div class="analytics-card" style="text-align: center; border: 2px solid #10b981;">
+                <div class="analytics-card" style="text-align: center; border: 2px solid #36c7a0;">
                     <div style="font-size: 3rem; margin-bottom: 0.5rem;">✨</div>
-                    <div style="font-size: 2rem; font-weight: 700; color: #10b981;">
+                    <div style="font-size: 2rem; font-weight: 700; color: #36c7a0;">
                         {action_counts['CREATE']}
                     </div>
                     <div style="color: #64748b; font-size: 0.875rem; margin-top: 0.5rem;">
@@ -695,9 +700,9 @@ def render_restructured_audit_trail_screen(session, settings):
 
             with col2:
                 st.markdown(f"""
-                <div class="analytics-card" style="text-align: center; border: 2px solid #f59e0b;">
+                <div class="analytics-card" style="text-align: center; border: 2px solid #e5b567;">
                     <div style="font-size: 3rem; margin-bottom: 0.5rem;">✏️</div>
-                    <div style="font-size: 2rem; font-weight: 700; color: #f59e0b;">
+                    <div style="font-size: 2rem; font-weight: 700; color: #e5b567;">
                         {action_counts['UPDATE']}
                     </div>
                     <div style="color: #64748b; font-size: 0.875rem; margin-top: 0.5rem;">
@@ -708,9 +713,9 @@ def render_restructured_audit_trail_screen(session, settings):
 
             with col3:
                 st.markdown(f"""
-                <div class="analytics-card" style="text-align: center; border: 2px solid #ef4444;">
+                <div class="analytics-card" style="text-align: center; border: 2px solid #e07a5f;">
                     <div style="font-size: 3rem; margin-bottom: 0.5rem;">🗑️</div>
-                    <div style="font-size: 2rem; font-weight: 700; color: #ef4444;">
+                    <div style="font-size: 2rem; font-weight: 700; color: #e07a5f;">
                         {action_counts['DELETE']}
                     </div>
                     <div style="color: #64748b; font-size: 0.875rem; margin-top: 0.5rem;">
@@ -745,7 +750,7 @@ def render_restructured_audit_trail_screen(session, settings):
                     values=list(action_counts.values()),
                     hole=.4,
                     marker=dict(
-                        colors=['#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+                        colors=['#36c7a0', '#e5b567', '#e07a5f', '#8b5cf6'],
                         line=dict(color='white', width=2)
                     )
                 )])
@@ -759,8 +764,9 @@ def render_restructured_audit_trail_screen(session, settings):
                 fig_pie.update_layout(
                     height=400,
                     showlegend=True,
-                    plot_bgcolor='white',
-                    paper_bgcolor='white',
+                    plot_bgcolor='#12161f',
+                    paper_bgcolor='#12161f',
+                    font=dict(color='#c8cdd5'),
                     margin=dict(l=20, r=20, t=30, b=20)
                 )
 
@@ -795,10 +801,11 @@ def render_restructured_audit_trail_screen(session, settings):
                     xaxis_title="Record Type",
                     yaxis_title="Number of Actions",
                     showlegend=False,
-                    plot_bgcolor='white',
-                    paper_bgcolor='white',
-                    xaxis=dict(showgrid=False),
-                    yaxis=dict(showgrid=True, gridcolor='#f0f0f0')
+                    plot_bgcolor='#12161f',
+                    paper_bgcolor='#12161f',
+                    font=dict(color='#c8cdd5'),
+                    xaxis=dict(showgrid=False, tickfont=dict(color='#c8cdd5')),
+                    yaxis=dict(showgrid=True, gridcolor='rgba(79, 143, 234, 0.12)', tickfont=dict(color='#c8cdd5'))
                 )
 
                 st.plotly_chart(fig_bar, use_container_width=True)
@@ -836,17 +843,20 @@ def render_restructured_audit_trail_screen(session, settings):
             fig_timeline.update_layout(
                 height=400,
                 showlegend=False,
-                plot_bgcolor='white',
-                paper_bgcolor='white',
+                plot_bgcolor='#12161f',
+                paper_bgcolor='#12161f',
+                font=dict(color='#c8cdd5'),
                 xaxis=dict(
-                    title="Date",
+                    title=dict(text="Date", font=dict(color='#c8cdd5')),
+                    tickfont=dict(color='#c8cdd5'),
                     showgrid=False,
                     tickangle=-45
                 ),
                 yaxis=dict(
-                    title="Number of Actions",
+                    title=dict(text="Number of Actions", font=dict(color='#c8cdd5')),
+                    tickfont=dict(color='#c8cdd5'),
                     showgrid=True,
-                    gridcolor='#f0f0f0'
+                    gridcolor='rgba(79, 143, 234, 0.12)'
                 ),
                 margin=dict(l=50, r=50, t=30, b=100)
             )
@@ -876,8 +886,8 @@ def render_restructured_audit_trail_screen(session, settings):
             st.markdown("""
             <div class="empty-state">
                 <div class="empty-state-icon">📊</div>
-                <h3 style="color: #1f2937;">No Analytics Data Available</h3>
-                <p style="color: #64748b;">Start making changes to see analytics and insights</p>
+                <h3 style="color: #c8cdd5;">No Analytics Data Available</h3>
+                <p style="color: rgba(200, 205, 213, 0.65);">Start making changes to see analytics and insights</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -920,14 +930,14 @@ def render_restructured_audit_trail_screen(session, settings):
             # Show export summary
             st.markdown(f"""
             <div style="
-                background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-                border-left: 6px solid #10b981;
+                background: #181d28;
+                border-left: 6px solid #36c7a0;
                 padding: 1.5rem;
                 border-radius: 12px;
                 margin: 1.5rem 0;
             ">
-                <h4 style="margin: 0 0 0.5rem 0; color: #065f46;">Ready to Export</h4>
-                <div style="color: #047857;">
+                <h4 style="margin: 0 0 0.5rem 0; color: #36c7a0;">Ready to Export</h4>
+                <div style="color: rgba(200, 205, 213, 0.65);">
                     <strong>{len(export_logs)} audit entries</strong> will be exported based on your current filters
                 </div>
             </div>
@@ -958,7 +968,7 @@ def render_restructured_audit_trail_screen(session, settings):
             st.markdown("""
             <div class="empty-state">
                 <div class="empty-state-icon">📦</div>
-                <h3 style="color: #1f2937;">No Data to Export</h3>
-                <p style="color: #64748b;">Adjust your filters to include audit entries for export</p>
+                <h3 style="color: #c8cdd5;">No Data to Export</h3>
+                <p style="color: rgba(200, 205, 213, 0.65);">Adjust your filters to include audit entries for export</p>
             </div>
             """, unsafe_allow_html=True)

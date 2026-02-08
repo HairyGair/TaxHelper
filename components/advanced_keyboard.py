@@ -571,7 +571,7 @@ def render_command_palette():
         }
         .command-search {
             padding: 16px;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid #c8cdd5;
         }
         .command-search input {
             width: 100%;

@@ -23,11 +23,11 @@ def inject_modern_styles():
        ============================================ */
     :root {
         /* Primary Colors */
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --primary-500: #667eea;
+        --primary-gradient: linear-gradient(135deg, #4f8fea 0%, #3a6db8 100%);
+        --primary-500: #4f8fea;
         --primary-600: #5a67d8;
-        --primary-700: #764ba2;
-        --primary-shadow: rgba(102, 126, 234, 0.4);
+        --primary-700: #3a6db8;
+        --primary-shadow: rgba(79, 143, 234, 0.4);
 
         /* Accent Colors */
         --accent-blue: #4299e1;
@@ -83,7 +83,7 @@ def inject_modern_styles():
         --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        --shadow-primary: 0 10px 20px -5px rgba(102, 126, 234, 0.3);
+        --shadow-primary: 0 10px 20px -5px rgba(79, 143, 234, 0.3);
         --shadow-success: 0 10px 20px -5px rgba(72, 187, 120, 0.3);
         --shadow-danger: 0 10px 20px -5px rgba(245, 101, 101, 0.3);
 
@@ -107,7 +107,7 @@ def inject_modern_styles():
 
     /* Main App Background */
     .stApp {
-        background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+        background: linear-gradient(135deg, #4f8fea15 0%, #3a6db815 100%);
         background-attachment: fixed;
     }
 
@@ -248,7 +248,7 @@ def inject_modern_styles():
 
     /* Metric with gradient background */
     .metric-gradient {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #3a6db8 100%);
         padding: var(--space-6);
         border-radius: var(--radius-xl);
         color: white;
@@ -369,7 +369,7 @@ def inject_modern_styles():
     }
 
     .streamlit-expanderHeader:hover {
-        background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
+        background: linear-gradient(135deg, #4f8fea10 0%, #3a6db810 100%);
         border-color: var(--primary-500);
         transform: translateX(4px);
     }
@@ -476,7 +476,7 @@ def inject_modern_styles():
     }
 
     .stDataFrame tbody tr:hover {
-        background: linear-gradient(90deg, #667eea10 0%, #764ba210 100%) !important;
+        background: linear-gradient(90deg, #4f8fea10 0%, #3a6db810 100%) !important;
         transform: scale(1.01);
     }
 
@@ -505,7 +505,7 @@ def inject_modern_styles():
     .stNumberInput > div > div > input:focus,
     .stDateInput > div > div > input:focus {
         border-color: var(--primary-500);
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        box-shadow: 0 0 0 3px rgba(79, 143, 234, 0.1);
         outline: none;
     }
 
@@ -525,14 +525,14 @@ def inject_modern_styles():
 
     .stSelectbox > div > div > select:focus {
         border-color: var(--primary-500);
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        box-shadow: 0 0 0 3px rgba(79, 143, 234, 0.1);
     }
 
     /* File Uploader */
     .stFileUploader > div {
         border: 2px dashed var(--primary-300);
         border-radius: var(--radius-lg);
-        background: linear-gradient(135deg, #667eea05 0%, #764ba205 100%);
+        background: linear-gradient(135deg, #4f8fea05 0%, #3a6db805 100%);
         padding: var(--space-8);
         text-align: center;
         transition: var(--transition-all);
@@ -542,7 +542,7 @@ def inject_modern_styles():
 
     .stFileUploader > div:hover {
         border-color: var(--primary-500);
-        background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
+        background: linear-gradient(135deg, #4f8fea10 0%, #3a6db810 100%);
         transform: scale(1.02);
     }
 
@@ -628,7 +628,7 @@ def inject_modern_styles():
     .stProgress > div > div > div {
         background: var(--primary-gradient);
         border-radius: var(--radius-full);
-        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 2px 10px rgba(79, 143, 234, 0.3);
         position: relative;
         overflow: hidden;
     }
@@ -1046,9 +1046,9 @@ def inject_modern_styles():
 
     .shadow-glow {
         box-shadow:
-            0 0 20px rgba(102, 126, 234, 0.5),
-            0 0 40px rgba(102, 126, 234, 0.3),
-            0 0 60px rgba(102, 126, 234, 0.1);
+            0 0 20px rgba(79, 143, 234, 0.5),
+            0 0 40px rgba(79, 143, 234, 0.3),
+            0 0 60px rgba(79, 143, 234, 0.1);
     }
 
     .border-gradient {
@@ -1181,8 +1181,8 @@ def create_progress_ring(percentage: int, label: str = "", size: int = 120):
             />
             <defs>
                 <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+                    <stop offset="0%" style="stop-color:#4f8fea;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#3a6db8;stop-opacity:1" />
                 </linearGradient>
             </defs>
         </svg>

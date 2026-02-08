@@ -12,80 +12,48 @@ import plotly.express as px
 from models import Expense, EXPENSE_CATEGORIES
 from utils import format_currency
 from collections import defaultdict, Counter
+from components.ui.interactions import show_toast, confirm_delete, validate_field, show_validation
 
 def render_restructured_expense_screen(session, settings):
     """
     Render a completely restructured expenses page with modern interface
     """
 
-    # Custom CSS for the expenses page - Modern red/orange gradient and animations
+    # Custom CSS removed - using global Obsidian dark theme
     st.markdown("""
     <style>
-    /* Expense Page Specific Styling */
-    .expense-header {
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        color: white;
-        padding: 3rem 2rem;
-        border-radius: 24px;
-        margin-bottom: 2rem;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 20px 60px rgba(239, 68, 68, 0.3);
-    }
-
-    .expense-header::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -10%;
-        width: 500px;
-        height: 500px;
-        background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
-        animation: float 8s ease-in-out infinite;
-    }
-
-    .expense-header::after {
-        content: '';
-        position: absolute;
-        bottom: -30%;
-        left: -5%;
-        width: 300px;
-        height: 300px;
-        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-        animation: float 10s ease-in-out infinite reverse;
-    }
-
+    /* Expense Page Specific Styling - Dark Theme */
     @keyframes float {
         0%, 100% { transform: translateY(0) rotate(0deg); }
         50% { transform: translateY(-30px) rotate(180deg); }
     }
 
     .status-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 16px;
         padding: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        border: 1px solid #f0f0f0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+        border: 1px solid rgba(79, 143, 234, 0.08);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         height: 100%;
     }
 
     .status-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 30px rgba(239, 68, 68, 0.15);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.45);
     }
 
     .metric-value {
         font-size: 2.5rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        background: linear-gradient(135deg, #e07a5f 0%, #e07a5f 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin: 0.5rem 0;
     }
 
     .metric-label {
-        color: #64748b;
+        color: rgba(200, 205, 213, 0.38);
         font-size: 0.875rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -94,20 +62,20 @@ def render_restructured_expense_screen(session, settings):
     }
 
     .expense-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 20px;
         padding: 2rem;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
         margin-bottom: 1.5rem;
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
-        border: 1px solid #f0f0f0;
+        border: 1px solid rgba(79, 143, 234, 0.08);
     }
 
     .expense-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 15px 50px rgba(239, 68, 68, 0.15);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.45);
     }
 
     .expense-card::before {
@@ -117,34 +85,34 @@ def render_restructured_expense_screen(session, settings):
         left: 0;
         width: 6px;
         height: 100%;
-        background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #7aafff 100%);
     }
 
     .expense-supplier {
         font-size: 1.5rem;
         font-weight: 700;
-        color: #1f2937;
+        color: #c8cdd5;
         margin-bottom: 0.5rem;
     }
 
     .expense-amount {
         font-size: 2.5rem;
         font-weight: 800;
-        color: #ef4444;
+        color: #e07a5f;
         margin: 0.5rem 0;
     }
 
     .expense-details {
-        color: #64748b;
+        color: rgba(200, 205, 213, 0.38);
         font-size: 0.95rem;
         line-height: 1.8;
     }
 
     .add-expense-section {
-        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        background: #181d28;
         border-radius: 20px;
         padding: 2rem;
-        border: 2px solid #fca5a5;
+        border: 2px solid rgba(79, 143, 234, 0.2);
         margin: 2rem 0;
     }
 
@@ -152,35 +120,35 @@ def render_restructured_expense_screen(session, settings):
         display: inline-block;
         padding: 0.5rem 1rem;
         border-radius: 20px;
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        color: #92400e;
+        background: rgba(79, 143, 234, 0.2);
+        color: #4f8fea;
         font-weight: 600;
         font-size: 0.875rem;
         margin: 0.25rem;
     }
 
     .edit-section {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        background: #181d28;
         border-radius: 20px;
         padding: 2rem;
         margin: 2rem 0;
-        border: 2px solid #fbbf24;
+        border: 2px solid rgba(79, 143, 234, 0.2);
     }
 
     .analytics-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 20px;
         padding: 2rem;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
         margin: 1rem 0;
     }
 
     .empty-state {
         text-align: center;
         padding: 4rem 2rem;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: #181d28;
         border-radius: 20px;
-        border: 2px dashed #cbd5e1;
+        border: 2px dashed rgba(79, 143, 234, 0.15);
     }
 
     .empty-state-icon {
@@ -190,23 +158,23 @@ def render_restructured_expense_screen(session, settings):
     }
 
     .filter-section {
-        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        background: #181d28;
         border-radius: 16px;
         padding: 1.5rem;
         margin: 2rem 0;
     }
 
     .summary-banner {
-        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-        border-left: 6px solid #ef4444;
+        background: #181d28;
+        border-left: 6px solid #4f8fea;
         padding: 1.5rem;
         border-radius: 12px;
         margin: 1rem 0;
     }
 
     .allowable-indicator {
-        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-        color: #065f46;
+        background: rgba(54, 199, 160, 0.2);
+        color: #36c7a0;
         padding: 0.5rem 1rem;
         border-radius: 12px;
         font-weight: 600;
@@ -214,8 +182,8 @@ def render_restructured_expense_screen(session, settings):
     }
 
     .receipt-link {
-        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-        color: #1e40af;
+        background: rgba(59, 130, 246, 0.2);
+        color: #7aafff;
         padding: 0.5rem 1rem;
         border-radius: 12px;
         font-weight: 600;
@@ -229,20 +197,39 @@ def render_restructured_expense_screen(session, settings):
         box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
 
+    .mr-chart-filter {
+        background: linear-gradient(135deg, rgba(79, 143, 234, 0.15) 0%, rgba(122, 175, 255, 0.08) 100%);
+        border-left: 4px solid #4f8fea;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin: 1.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .filter-label {
+        color: rgba(200, 205, 213, 0.65);
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .filter-value {
+        color: #4f8fea;
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
     </style>
     """, unsafe_allow_html=True)
 
-    # Header Section with animation
+    # Header Section with ob-hero class
     st.markdown("""
-    <div class="expense-header">
-        <div style="position: relative; z-index: 1;">
-            <h1 style="margin: 0; font-size: 3rem; font-weight: 800;">
-                Business Expenses
-            </h1>
-            <p style="margin: 1rem 0 0 0; font-size: 1.2rem; opacity: 0.95;">
-                Track deductible expenses to reduce your tax bill
-            </p>
-        </div>
+    <div class="ob-hero">
+        <h1>Business Expenses</h1>
+        <p>Track deductible expenses to reduce your tax bill</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -306,7 +293,7 @@ def render_restructured_expense_screen(session, settings):
                 <div class="status-card">
                     <div class="metric-label">Total Expenses</div>
                     <div class="metric-value">{}</div>
-                    <div style="color: #ef4444; font-size: 0.875rem; margin-top: 0.5rem;">
+                    <div style="color: #e07a5f; font-size: 0.875rem; margin-top: 0.5rem;">
                         {} transaction(s)
                     </div>
                 </div>
@@ -394,7 +381,7 @@ def render_restructured_expense_screen(session, settings):
                         name='Total Expenses',
                         x=months_display,
                         y=expense_amounts,
-                        marker_color='#ef4444',
+                        marker_color='#e07a5f',
                         text=[format_currency(v) for v in expense_amounts],
                         textposition='outside',
                         hovertemplate='<b>Expenses</b><br>%{x}<br>£%{y:,.2f}<extra></extra>'
@@ -404,8 +391,8 @@ def render_restructured_expense_screen(session, settings):
                         height=400,
                         title="Monthly Expense Totals",
                         showlegend=False,
-                        plot_bgcolor='white',
-                        paper_bgcolor='white',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
                         xaxis=dict(
                             showgrid=False,
                             title="",
@@ -414,7 +401,7 @@ def render_restructured_expense_screen(session, settings):
                         yaxis=dict(
                             title="Amount (£)",
                             showgrid=True,
-                            gridcolor='#f0f0f0'
+                            gridcolor='rgba(79, 143, 234, 0.08)'
                         ),
                         margin=dict(l=50, r=50, t=50, b=100)
                     )
@@ -450,8 +437,8 @@ def render_restructured_expense_screen(session, settings):
                         height=400,
                         title="Expenses by Category",
                         showlegend=True,
-                        plot_bgcolor='white',
-                        paper_bgcolor='white',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
                         margin=dict(l=20, r=20, t=50, b=20),
                         legend=dict(
                             orientation="v",
@@ -465,13 +452,35 @@ def render_restructured_expense_screen(session, settings):
 
                     st.plotly_chart(fig_pie, use_container_width=True)
 
+            # Chart drill-down filter
+            all_cats = sorted(set(r.category for r in expense_records))
+            filter_cat = st.selectbox(
+                "Drill down by category",
+                ["All Categories"] + all_cats,
+                key="expense_chart_filter",
+                label_visibility="collapsed",
+            )
+
+            if filter_cat != "All Categories":
+                st.markdown(f"""
+                <div class="mr-chart-filter">
+                    <span class="filter-label">Filtered by:</span>
+                    <span class="filter-value">{filter_cat}</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+                if st.button("Clear filter", key="clear_expense_filter"):
+                    st.session_state.expense_chart_filter = "All Categories"
+                    st.rerun()
+
             # Expense Records List - Grouped by Category
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("### Expenses by Category")
 
             # Group by category for better organization
+            _display_records = expense_records if filter_cat == "All Categories" else [r for r in expense_records if r.category == filter_cat]
             category_groups = defaultdict(list)
-            for record in expense_records:
+            for record in _display_records:
                 category_groups[record.category].append(record)
 
             # Sort categories by total amount
@@ -488,28 +497,28 @@ def render_restructured_expense_screen(session, settings):
 
                 with st.expander(
                     f"**{category}** - {len(expenses)} expense(s) - {format_currency(category_total)} ({category_percentage:.1f}%)",
-                    expanded=False
+                    expanded=(filter_cat != "All Categories")
                 ):
                     # Category summary
                     st.markdown(f"""
                     <div class="summary-banner">
-                        <strong style="font-size: 1.25rem;">{category}</strong><br>
+                        <strong style="font-size: 1.25rem; color: #c8cdd5;">{category}</strong><br>
                         <div style="margin-top: 1rem; display: flex; gap: 2rem; flex-wrap: wrap;">
                             <div>
-                                <span style="color: #64748b;">Total:</span>
-                                <strong style="color: #ef4444; font-size: 1.1rem;">{format_currency(category_total)}</strong>
+                                <span style="color: rgba(200, 205, 213, 0.38);">Total:</span>
+                                <strong style="color: #e07a5f; font-size: 1.1rem;">{format_currency(category_total)}</strong>
                             </div>
                             <div>
-                                <span style="color: #64748b;">Transactions:</span>
-                                <strong style="font-size: 1.1rem;">{len(expenses)}</strong>
+                                <span style="color: rgba(200, 205, 213, 0.38);">Transactions:</span>
+                                <strong style="font-size: 1.1rem; color: #c8cdd5;">{len(expenses)}</strong>
                             </div>
                             <div>
-                                <span style="color: #64748b;">% of Total:</span>
-                                <strong style="font-size: 1.1rem;">{category_percentage:.1f}%</strong>
+                                <span style="color: rgba(200, 205, 213, 0.38);">% of Total:</span>
+                                <strong style="font-size: 1.1rem; color: #c8cdd5;">{category_percentage:.1f}%</strong>
                             </div>
                             <div>
-                                <span style="color: #64748b;">Average:</span>
-                                <strong style="font-size: 1.1rem;">{format_currency(category_total / len(expenses))}</strong>
+                                <span style="color: rgba(200, 205, 213, 0.38);">Average:</span>
+                                <strong style="font-size: 1.1rem; color: #c8cdd5;">{format_currency(category_total / len(expenses))}</strong>
                             </div>
                         </div>
                     </div>
@@ -543,7 +552,7 @@ def render_restructured_expense_screen(session, settings):
                                     <div class="allowable-indicator">
                                         ✓ Tax Deductible
                                     </div>
-                                    <div style="margin-top: 1rem; color: #94a3b8; font-size: 0.8rem;">
+                                    <div style="margin-top: 1rem; color: rgba(200, 205, 213, 0.38); font-size: 0.8rem;">
                                         Record ID: {expense.id}
                                     </div>
                                 </div>
@@ -556,11 +565,11 @@ def render_restructured_expense_screen(session, settings):
             st.markdown("""
             <div class="empty-state">
                 <div class="empty-state-icon">💳</div>
-                <h2 style="color: #1f2937; margin-bottom: 0.5rem;">No Expense Records Found</h2>
-                <p style="color: #64748b; font-size: 1.1rem;">
+                <h2 style="color: #c8cdd5; margin-bottom: 0.5rem;">No Expense Records Found</h2>
+                <p style="color: rgba(200, 205, 213, 0.38); font-size: 1.1rem;">
                     Add your first expense record to start tracking deductible costs
                 </p>
-                <p style="color: #94a3b8; margin-top: 1rem;">
+                <p style="color: rgba(200, 205, 213, 0.38); margin-top: 1rem;">
                     Use the "Add New Expense" tab to get started
                 </p>
             </div>
@@ -573,8 +582,8 @@ def render_restructured_expense_screen(session, settings):
 
         st.markdown("""
         <div class="add-expense-section">
-            <h2 style="color: #991b1b; margin: 0 0 0.5rem 0;">Add New Expense Record</h2>
-            <p style="color: #dc2626; margin: 0;">Enter details of your business expense below</p>
+            <h2 style="color: #c8cdd5; margin: 0 0 0.5rem 0;">Add New Expense Record</h2>
+            <p style="color: rgba(200, 205, 213, 0.65); margin: 0;">Enter details of your business expense below</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -623,13 +632,13 @@ def render_restructured_expense_screen(session, settings):
                 # Show category info
                 st.markdown(f"""
                 <div style="
-                    background: #dbeafe;
+                    background: rgba(59, 130, 246, 0.15);
                     padding: 0.75rem;
                     border-radius: 8px;
                     margin: 1rem 0;
                 ">
-                    <strong style="color: #1e40af;">Selected Category:</strong><br>
-                    <span style="color: #1e3a8a; font-size: 1rem;">
+                    <strong style="color: #7aafff;">Selected Category:</strong><br>
+                    <span style="color: #93c5fd; font-size: 1rem;">
                         {expense_category}
                     </span>
                 </div>
@@ -645,20 +654,20 @@ def render_restructured_expense_screen(session, settings):
             if expense_amount > 0:
                 st.markdown(f"""
                 <div style="
-                    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-                    border: 3px solid #ef4444;
+                    background: rgba(224, 122, 95, 0.15);
+                    border: 3px solid #e07a5f;
                     border-radius: 16px;
                     padding: 1.5rem;
                     margin: 1.5rem 0;
                     text-align: center;
                 ">
-                    <div style="color: #991b1b; font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">
+                    <div style="color: #fca5a5; font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">
                         EXPENSE AMOUNT
                     </div>
-                    <div style="color: #991b1b; font-size: 3rem; font-weight: 800;">
+                    <div style="color: #e07a5f; font-size: 3rem; font-weight: 800;">
                         -{format_currency(expense_amount)}
                     </div>
-                    <div style="color: #dc2626; font-size: 0.9rem; margin-top: 0.5rem;">
+                    <div style="color: #fca5a5; font-size: 0.9rem; margin-top: 0.5rem;">
                         Tax deductible business expense
                     </div>
                 </div>
@@ -674,7 +683,15 @@ def render_restructured_expense_screen(session, settings):
                 )
 
             if submitted:
-                if expense_supplier and expense_amount > 0:
+                # Validate all fields
+                v_supplier = validate_field(expense_supplier, required=True, min_length=2, label="Supplier")
+                v_amount = validate_field(expense_amount, required=True, min_value=0.01, max_value=999999, label="Amount")
+
+                errors = [e for ok, e in [v_supplier, v_amount] if not ok]
+                if errors:
+                    for err in errors:
+                        show_validation(False, err)
+                else:
                     new_expense = Expense(
                         date=expense_date,
                         supplier=expense_supplier,
@@ -686,11 +703,8 @@ def render_restructured_expense_screen(session, settings):
                     )
                     session.add(new_expense)
                     session.commit()
-                    st.success("✅ Expense record added successfully!")
-                    st.balloons()
+                    show_toast(f"Expense saved — {format_currency(expense_amount)} to {expense_supplier}", "success")
                     st.rerun()
-                else:
-                    st.error("❌ Please provide both supplier name and amount")
 
     with tab3:
         # ============================================================================
@@ -712,13 +726,13 @@ def render_restructured_expense_screen(session, settings):
             with col1:
                 st.markdown(f"""
                 <div class="analytics-card" style="text-align: center;">
-                    <div style="color: #64748b; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
+                    <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
                         ALL-TIME EXPENSES
                     </div>
-                    <div style="font-size: 3rem; font-weight: 800; color: #ef4444;">
+                    <div style="font-size: 3rem; font-weight: 800; color: #e07a5f;">
                         {format_currency(total_all_expenses)}
                     </div>
-                    <div style="color: #64748b; font-size: 0.9rem; margin-top: 0.5rem;">
+                    <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.9rem; margin-top: 0.5rem;">
                         From {len(all_expenses)} transactions
                     </div>
                 </div>
@@ -728,13 +742,13 @@ def render_restructured_expense_screen(session, settings):
                 unique_suppliers = len(set(r.supplier for r in all_expenses))
                 st.markdown(f"""
                 <div class="analytics-card" style="text-align: center;">
-                    <div style="color: #64748b; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
+                    <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
                         SUPPLIERS
                     </div>
                     <div style="font-size: 3rem; font-weight: 800; color: #f97316;">
                         {unique_suppliers}
                     </div>
-                    <div style="color: #64748b; font-size: 0.9rem; margin-top: 0.5rem;">
+                    <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.9rem; margin-top: 0.5rem;">
                         Unique vendors
                     </div>
                 </div>
@@ -744,13 +758,13 @@ def render_restructured_expense_screen(session, settings):
                 unique_categories = len(set(r.category for r in all_expenses))
                 st.markdown(f"""
                 <div class="analytics-card" style="text-align: center;">
-                    <div style="color: #64748b; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
+                    <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
                         CATEGORIES
                     </div>
                     <div style="font-size: 3rem; font-weight: 800; color: #8b5cf6;">
                         {unique_categories}
                     </div>
-                    <div style="color: #64748b; font-size: 0.9rem; margin-top: 0.5rem;">
+                    <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.9rem; margin-top: 0.5rem;">
                         Expense types
                     </div>
                 </div>
@@ -805,7 +819,7 @@ def render_restructured_expense_screen(session, settings):
                     plot_bgcolor='white',
                     paper_bgcolor='white',
                     margin=dict(l=10, r=100, t=40, b=50),
-                    xaxis=dict(showgrid=True, gridcolor='#f0f0f0'),
+                    xaxis=dict(showgrid=True, gridcolor='rgba(79, 143, 234, 0.08)'),
                     yaxis=dict(showgrid=False)
                 )
 
@@ -855,7 +869,7 @@ def render_restructured_expense_screen(session, settings):
                     plot_bgcolor='white',
                     paper_bgcolor='white',
                     margin=dict(l=10, r=100, t=40, b=50),
-                    xaxis=dict(showgrid=True, gridcolor='#f0f0f0'),
+                    xaxis=dict(showgrid=True, gridcolor='rgba(79, 143, 234, 0.08)'),
                     yaxis=dict(showgrid=False)
                 )
 
@@ -890,10 +904,10 @@ def render_restructured_expense_screen(session, settings):
                 x=months_display,
                 y=expense_trend,
                 name='Total Expenses',
-                line=dict(color='#ef4444', width=3),
-                marker=dict(size=10, color='#ef4444'),
+                line=dict(color='#e07a5f', width=3),
+                marker=dict(size=10, color='#e07a5f'),
                 fill='tozeroy',
-                fillcolor='rgba(239, 68, 68, 0.1)',
+                fillcolor='rgba(224, 122, 95, 0.1)',
                 hovertemplate='<b>Expenses</b><br>%{x}<br>£%{y:,.2f}<extra></extra>'
             ))
 
@@ -918,7 +932,7 @@ def render_restructured_expense_screen(session, settings):
                 yaxis=dict(
                     title="Expense Amount (£)",
                     showgrid=True,
-                    gridcolor='#f0f0f0',
+                    gridcolor='rgba(79, 143, 234, 0.08)',
                     zeroline=True,
                     zerolinecolor='#cbd5e1'
                 ),
@@ -974,8 +988,8 @@ def render_restructured_expense_screen(session, settings):
             st.markdown("""
             <div class="empty-state">
                 <div class="empty-state-icon">📊</div>
-                <h3 style="color: #1f2937;">No Expense Data Available</h3>
-                <p style="color: #64748b;">Add some expense records to see analytics and insights</p>
+                <h3 style="color: #c8cdd5;">No Expense Data Available</h3>
+                <p style="color: rgba(200, 205, 213, 0.38);">Add some expense records to see analytics and insights</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1011,14 +1025,14 @@ def render_restructured_expense_screen(session, settings):
                 # Display current record info
                 st.markdown(f"""
                 <div style="
-                    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-                    border-left: 6px solid #ef4444;
+                    background: rgba(224, 122, 95, 0.15);
+                    border-left: 6px solid #4f8fea;
                     padding: 1.5rem;
                     border-radius: 12px;
                     margin: 1.5rem 0;
                 ">
-                    <h4 style="margin: 0 0 1rem 0; color: #991b1b;">Selected Record</h4>
-                    <div style="color: #7f1d1d;">
+                    <h4 style="margin: 0 0 1rem 0; color: #c8cdd5;">Selected Record</h4>
+                    <div style="color: rgba(200, 205, 213, 0.65);">
                         <strong>Supplier:</strong> {record.supplier}<br>
                         <strong>Date:</strong> {record.date.strftime('%d %B %Y')}<br>
                         <strong>Amount:</strong> {format_currency(record.amount)}<br>
@@ -1068,13 +1082,13 @@ def render_restructured_expense_screen(session, settings):
                             # Show updated amount
                             st.markdown(f"""
                             <div style="
-                                background: #fee2e2;
+                                background: rgba(224, 122, 95, 0.15);
                                 padding: 1rem;
                                 border-radius: 8px;
                                 margin-top: 1rem;
                             ">
-                                <strong style="color: #991b1b;">New Amount:</strong><br>
-                                <span style="color: #dc2626; font-size: 1.5rem; font-weight: 700;">
+                                <strong style="color: #c8cdd5;">New Amount:</strong><br>
+                                <span style="color: #e07a5f; font-size: 1.5rem; font-weight: 700;">
                                     -{format_currency(new_amount)}
                                 </span>
                             </div>
@@ -1094,56 +1108,71 @@ def render_restructured_expense_screen(session, settings):
                                 record.receipt_link = new_receipt if new_receipt else None
                                 record.notes = new_notes if new_notes else None
                                 session.commit()
-                                st.success("✅ Record updated successfully!")
-                                st.balloons()
+                                show_toast(f"Expense record #{record.id} updated", "success")
+                                st.rerun()
+
+                    # Receipt upload section (outside form)
+                    st.markdown("---")
+                    st.markdown("#### Attach Receipt")
+
+                    if record.receipt_link:
+                        st.markdown(f"""
+                        <div style="background: rgba(54,199,160,0.08); border: 1px solid rgba(54,199,160,0.25); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1rem;">
+                            <span style="color: #36c7a0; font-weight: 600;">Current receipt:</span>
+                            <span style="color: #c8cdd5;">{record.receipt_link}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                    uploaded_file = st.file_uploader(
+                        "Upload receipt image",
+                        type=["png", "jpg", "jpeg", "pdf"],
+                        key=f"receipt_upload_{record.id}",
+                        help="Upload a receipt image or PDF (max 10MB)"
+                    )
+
+                    if uploaded_file is not None:
+                        # Save receipt
+                        import os
+                        receipts_dir = os.path.join(os.path.dirname(__file__), 'receipts')
+                        os.makedirs(receipts_dir, mode=0o700, exist_ok=True)
+
+                        # Generate filename
+                        safe_supplier = "".join(c if c.isalnum() else "_" for c in record.supplier)[:30]
+                        ext = uploaded_file.name.rsplit(".", 1)[-1].lower()
+                        filename = f"{record.date.strftime('%Y%m%d')}_{safe_supplier}_{record.id}.{ext}"
+                        filepath = os.path.join(receipts_dir, filename)
+
+                        # Show preview for images
+                        if ext in ["png", "jpg", "jpeg"]:
+                            st.image(uploaded_file, caption=uploaded_file.name, width=300)
+                        else:
+                            st.info(f"PDF file: {uploaded_file.name} ({uploaded_file.size / 1024:.1f} KB)")
+
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button("Save Receipt", key=f"save_receipt_{record.id}", type="primary", use_container_width=True):
+                                with open(filepath, "wb") as f:
+                                    f.write(uploaded_file.getbuffer())
+                                record.receipt_link = f"receipts/{filename}"
+                                session.commit()
+                                show_toast(f"Receipt attached to expense #{record.id}", "success")
+                                st.rerun()
+                        with col2:
+                            if st.button("Cancel", key=f"cancel_receipt_{record.id}", use_container_width=True):
                                 st.rerun()
 
                 elif action == "Delete Record":
                     st.markdown("#### Delete Record")
 
-                    st.warning(
-                        "⚠️ This action cannot be undone! "
-                        "The expense record will be permanently deleted from the database."
-                    )
-
-                    # Confirmation
-                    st.markdown(f"""
-                    <div style="
-                        background: #fee2e2;
-                        border: 2px solid #ef4444;
-                        padding: 1.5rem;
-                        border-radius: 12px;
-                        margin: 1rem 0;
-                    ">
-                        <h4 style="margin: 0 0 1rem 0; color: #991b1b;">You are about to delete:</h4>
-                        <div style="color: #7f1d1d;">
-                            <strong>Supplier:</strong> {record.supplier}<br>
-                            <strong>Date:</strong> {record.date.strftime('%d %B %Y')}<br>
-                            <strong>Amount:</strong> {format_currency(record.amount)}<br>
-                            <strong>Category:</strong> {record.category}<br>
-                            <strong>ID:</strong> {record.id}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    confirm_text = st.text_input(
-                        "Type DELETE to confirm",
-                        key="delete_confirm",
-                        help="Type the word DELETE in capital letters to enable deletion"
-                    )
-
-                    col1, col2, col3 = st.columns([1, 1, 1])
-                    with col2:
-                        if st.button(
-                            "Delete Record",
-                            type="secondary",
-                            use_container_width=True,
-                            disabled=(confirm_text != "DELETE")
-                        ):
-                            session.delete(record)
-                            session.commit()
-                            st.success("✅ Record deleted successfully!")
-                            st.rerun()
+                    if confirm_delete(
+                        f"expense_{record.id}",
+                        f"Expense #{record.id}",
+                        f"{record.supplier} — {format_currency(record.amount)} ({record.category}) on {record.date.strftime('%d %B %Y')}"
+                    ):
+                        session.delete(record)
+                        session.commit()
+                        show_toast(f"Expense record #{record.id} deleted", "delete")
+                        st.rerun()
             else:
                 st.error(f"❌ Record with ID {record_id} not found. Please check the ID and try again.")
 

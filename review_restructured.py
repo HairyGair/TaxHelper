@@ -10,6 +10,7 @@ from sqlalchemy import func
 import plotly.graph_objects as go
 from models import Transaction, Income, Expense, INCOME_TYPES, EXPENSE_CATEGORIES
 from utils import format_currency
+from components.ui.interactions import show_toast
 
 def render_restructured_review_screen(session, settings):
     """
@@ -21,8 +22,8 @@ def render_restructured_review_screen(session, settings):
     <style>
     /* Final Review Screen Specific Styling */
     .review-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
+        color: #c8cdd5;
         padding: 3rem 2rem;
         border-radius: 24px;
         margin-bottom: 2rem;
@@ -47,7 +48,7 @@ def render_restructured_review_screen(session, settings):
     }
     
     .transaction-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.85);
         border-radius: 20px;
         padding: 2rem;
         box-shadow: 0 10px 40px rgba(0,0,0,0.1);
@@ -69,15 +70,15 @@ def render_restructured_review_screen(session, settings):
         left: 0;
         width: 6px;
         height: 100%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #4f8fea 100%);
     }
     
     .transaction-card.income::before {
-        background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+        background: linear-gradient(135deg, #36c7a0 0%, #36c7a0 100%);
     }
     
     .transaction-card.expense::before {
-        background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+        background: linear-gradient(135deg, #e07a5f 0%, #e07a5f 100%);
     }
     
     .ai-confidence-badge {
@@ -91,18 +92,18 @@ def render_restructured_review_screen(session, settings):
     }
     
     .ai-confidence-badge.high {
-        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-        color: #065f46;
+        background: linear-gradient(135deg, rgba(54, 199, 160, 0.2) 0%, rgba(54, 199, 160, 0.3) 100%);
+        color: #36c7a0;
     }
-    
+
     .ai-confidence-badge.medium {
-        background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
-        color: #92400e;
+        background: linear-gradient(135deg, rgba(229, 181, 103, 0.2) 0%, rgba(229, 181, 103, 0.3) 100%);
+        color: #e5b567;
     }
-    
+
     .ai-confidence-badge.low {
-        background: linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%);
-        color: #991b1b;
+        background: linear-gradient(135deg, rgba(224, 122, 95, 0.2) 0%, rgba(224, 122, 95, 0.3) 100%);
+        color: #e07a5f;
     }
     
     .action-button {
@@ -118,18 +119,18 @@ def render_restructured_review_screen(session, settings):
     }
     
     .action-button.primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: linear-gradient(135deg, #4f8fea 0%, #b8860b 100%);
+        color: #c8cdd5;
     }
-    
+
     .action-button.success {
-        background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-        color: white;
+        background: linear-gradient(135deg, #36c7a0 0%, #36c7a0 100%);
+        color: #c8cdd5;
     }
-    
+
     .action-button.warning {
-        background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-        color: white;
+        background: linear-gradient(135deg, #e5b567 0%, #e5b567 100%);
+        color: #181d28;
     }
     
     .action-button:hover {
@@ -141,7 +142,7 @@ def render_restructured_review_screen(session, settings):
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
+        background: linear-gradient(135deg, #181d28 0%, #12161f 100%);
         border-radius: 16px;
         padding: 1.5rem;
         margin: 2rem 0;
@@ -155,14 +156,14 @@ def render_restructured_review_screen(session, settings):
     .progress-stat-value {
         font-size: 2rem;
         font-weight: 700;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #4f8fea 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
-    
+
     .progress-stat-label {
         font-size: 0.875rem;
-        color: #64748b;
+        color: rgba(200, 205, 213, 0.45);
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-top: 0.25rem;
@@ -172,11 +173,11 @@ def render_restructured_review_screen(session, settings):
         display: flex;
         gap: 1rem;
         padding: 0.5rem;
-        background: #f1f5f9;
+        background: #181d28;
         border-radius: 12px;
         margin: 2rem 0;
     }
-    
+
     .mode-button {
         flex: 1;
         padding: 1rem;
@@ -187,9 +188,9 @@ def render_restructured_review_screen(session, settings):
         cursor: pointer;
         transition: all 0.3s ease;
     }
-    
+
     .mode-button.active {
-        background: white;
+        background: rgba(18, 22, 31, 0.85);
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     
@@ -197,26 +198,27 @@ def render_restructured_review_screen(session, settings):
         display: flex;
         gap: 1rem;
         padding: 1.5rem;
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        background: linear-gradient(135deg, rgba(79, 143, 234, 0.15) 0%, rgba(79, 143, 234, 0.1) 100%);
         border-radius: 16px;
         margin: 1rem 0;
         flex-wrap: wrap;
     }
-    
+
     .quick-action-chip {
         padding: 0.5rem 1rem;
-        background: white;
+        background: rgba(18, 22, 31, 0.85);
         border-radius: 20px;
-        border: 2px solid #fbbf24;
+        border: 2px solid rgba(79, 143, 234, 0.3);
         font-weight: 600;
         font-size: 0.875rem;
         cursor: pointer;
         transition: all 0.2s ease;
+        color: #c8cdd5;
     }
-    
+
     .quick-action-chip:hover {
-        background: #fbbf24;
-        color: white;
+        background: #4f8fea;
+        color: #181d28;
         transform: scale(1.05);
     }
     
@@ -231,14 +233,14 @@ def render_restructured_review_screen(session, settings):
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: #cbd5e1;
+        background: rgba(200, 205, 213, 0.25);
         transition: all 0.3s ease;
     }
-    
+
     .swipe-dot.active {
         width: 24px;
         border-radius: 4px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #4f8fea 100%);
     }
     
     .category-grid {
@@ -251,29 +253,30 @@ def render_restructured_review_screen(session, settings):
     .category-option {
         padding: 1rem;
         text-align: center;
-        border: 2px solid #e5e7eb;
+        border: 2px solid rgba(79, 143, 234, 0.08);
         border-radius: 12px;
         cursor: pointer;
         transition: all 0.3s ease;
-        background: white;
+        background: rgba(18, 22, 31, 0.85);
+        color: #c8cdd5;
     }
-    
+
     .category-option:hover {
-        border-color: #667eea;
-        background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
+        border-color: #4f8fea;
+        background: linear-gradient(135deg, rgba(79, 143, 234, 0.2) 0%, rgba(79, 143, 234, 0.1) 100%);
         transform: translateY(-3px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        box-shadow: 0 5px 15px rgba(79, 143, 234, 0.3);
     }
-    
+
     .category-option.selected {
-        border-color: #667eea;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        border-color: #4f8fea;
+        background: linear-gradient(135deg, #4f8fea 0%, #b8860b 100%);
+        color: #181d28;
     }
     
     .smart-suggestion {
-        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-        border: 1px solid #3b82f6;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%);
+        border: 1px solid rgba(59, 130, 246, 0.3);
         border-radius: 12px;
         padding: 1rem;
         margin: 1rem 0;
@@ -291,7 +294,7 @@ def render_restructured_review_screen(session, settings):
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
-        background: white;
+        background: rgba(18, 22, 31, 0.85);
         border-radius: 20px;
         padding: 1rem 2rem;
         box-shadow: 0 10px 40px rgba(0,0,0,0.2);
@@ -300,7 +303,106 @@ def render_restructured_review_screen(session, settings):
         align-items: center;
         z-index: 1000;
     }
-    
+
+    /* Bulk review card styles */
+    .review-txn-card {
+        background: var(--mr-glass, rgba(18, 22, 31, 0.92));
+        border: 1px solid rgba(79, 143, 234, 0.08);
+        border-radius: 14px;
+        padding: 0.9rem 1.1rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.25s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    .review-txn-card:hover {
+        border-color: rgba(79, 143, 234, 0.22);
+        background: rgba(24, 29, 40, 0.95);
+    }
+    .review-txn-card.selected {
+        border-color: rgba(79, 143, 234, 0.4);
+        background: rgba(79, 143, 234, 0.06);
+    }
+    .review-txn-card::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: 3px;
+        background: rgba(79, 143, 234, 0.3);
+    }
+    .review-txn-card.income-card::before { background: #36c7a0; }
+    .review-txn-card.expense-card::before { background: #e07a5f; }
+
+    .review-txn-desc {
+        flex: 1;
+        min-width: 0;
+    }
+    .review-txn-desc .name {
+        font-weight: 600;
+        color: #c8cdd5;
+        font-size: 0.88rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .review-txn-desc .meta {
+        color: rgba(200, 205, 213, 0.45);
+        font-size: 0.75rem;
+        margin-top: 0.15rem;
+    }
+    .review-txn-amount {
+        font-weight: 700;
+        font-size: 0.95rem;
+        white-space: nowrap;
+    }
+    .review-txn-badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.2rem 0.55rem;
+        border-radius: 6px;
+        white-space: nowrap;
+    }
+    .review-txn-badge.conf-high {
+        background: rgba(54, 199, 160, 0.15);
+        color: #36c7a0;
+    }
+    .review-txn-badge.conf-med {
+        background: rgba(229, 181, 103, 0.15);
+        color: #e5b567;
+    }
+    .review-txn-badge.conf-low {
+        background: rgba(224, 122, 95, 0.15);
+        color: #e07a5f;
+    }
+
+    /* Approve All High Confidence banner */
+    .approve-hc-banner {
+        background: linear-gradient(135deg, rgba(54, 199, 160, 0.12) 0%, rgba(54, 199, 160, 0.06) 100%);
+        border: 1px solid rgba(54, 199, 160, 0.2);
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .approve-hc-banner .count {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #36c7a0;
+        line-height: 1;
+    }
+    .approve-hc-banner .label {
+        color: rgba(200, 205, 213, 0.7);
+        font-size: 0.85rem;
+    }
+    .approve-hc-banner .label strong {
+        color: #36c7a0;
+    }
+
     </style>
     """, unsafe_allow_html=True)
     
@@ -316,12 +418,12 @@ def render_restructured_review_screen(session, settings):
     # HEADER SECTION
     # ============================================================================
     st.markdown("""
-    <div class="review-header">
+    <div class="review-header ob-hero">
         <div style="position: relative; z-index: 1;">
-            <h1 style="margin: 0; font-size: 3rem; font-weight: 800;">
+            <h1 style="margin: 0; font-size: 3rem; font-weight: 800; color: #c8cdd5;">
                 🔍 Final Review
             </h1>
-            <p style="margin: 1rem 0 0 0; font-size: 1.2rem; opacity: 0.95;">
+            <p style="margin: 1rem 0 0 0; font-size: 1.2rem; opacity: 0.95; color: #c8cdd5;">
                 Review and categorize your transactions with AI-powered suggestions
             </p>
         </div>
@@ -364,7 +466,28 @@ def render_restructured_review_screen(session, settings):
     
     # Progress bar
     st.progress(completion_pct / 100)
-    
+
+    # ── Approve All High Confidence (visible across all modes) ────────
+    high_conf_txns = [t for t in unreviewed if t.confidence_score >= 80]
+    if high_conf_txns:
+        hc_col1, hc_col2 = st.columns([3, 1])
+        with hc_col1:
+            st.markdown(f"""
+            <div class="approve-hc-banner">
+                <div class="count">{len(high_conf_txns)}</div>
+                <div class="label">
+                    transactions with <strong>&ge;80% AI confidence</strong> — safe to auto-approve
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        with hc_col2:
+            if st.button("Approve All High Confidence", type="primary", use_container_width=True, key="global_approve_hc"):
+                for txn in high_conf_txns:
+                    txn.reviewed = True
+                session.commit()
+                show_toast(f"Auto-approved {len(high_conf_txns)} high-confidence transactions", "success")
+                st.rerun()
+
     # ============================================================================
     # REVIEW MODE SELECTOR
     # ============================================================================
@@ -398,13 +521,13 @@ def render_restructured_review_screen(session, settings):
         <div style="
             text-align: center;
             padding: 4rem 2rem;
-            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            background: linear-gradient(135deg, rgba(54, 199, 160, 0.2) 0%, rgba(54, 199, 160, 0.15) 100%);
             border-radius: 20px;
             margin: 2rem 0;
         ">
             <div style="font-size: 4rem; margin-bottom: 1rem;">🎉</div>
-            <h2 style="margin: 0 0 1rem 0; color: #065f46;">All Transactions Reviewed!</h2>
-            <p style="color: #047857; font-size: 1.1rem;">
+            <h2 style="margin: 0 0 1rem 0; color: #36c7a0;">All Transactions Reviewed!</h2>
+            <p style="color: rgba(200, 205, 213, 0.7); font-size: 1.1rem;">
                 Great job! You've reviewed all {count} transactions.
             </p>
         </div>
@@ -418,7 +541,7 @@ def render_restructured_review_screen(session, settings):
                 st.rerun()
         with col2:
             if st.button("📥 Import More", use_container_width=True):
-                st.session_state.navigate_to = "📥 Import Statements"
+                st.session_state.navigate_to = "Import Statements"
                 st.rerun()
         with col3:
             if st.button("🏠 Dashboard", use_container_width=True):
@@ -460,19 +583,19 @@ def render_restructured_review_screen(session, settings):
         <div class="transaction-card {card_class}">
             <div style="display: flex; justify-content: space-between; align-items: start;">
                 <div>
-                    <h2 style="margin: 0 0 0.5rem 0; color: #1f2937;">
+                    <h2 style="margin: 0 0 0.5rem 0; color: #c8cdd5;">
                         {current_txn.description[:60]}{'...' if len(current_txn.description) > 60 else ''}
                     </h2>
-                    <div style="color: #6b7280; font-size: 1rem;">
-                        📅 {current_txn.date.strftime('%d %B %Y')} • 
+                    <div style="color: rgba(200, 205, 213, 0.7); font-size: 1rem;">
+                        📅 {current_txn.date.strftime('%d %B %Y')} •
                         🏦 {current_txn.account_name if current_txn.account_name else 'Unknown Account'}
                     </div>
                 </div>
                 <div style="text-align: right;">
-                    <div style="font-size: 2.5rem; font-weight: 700; color: {'#10b981' if is_income else '#ef4444'};">
+                    <div style="font-size: 2.5rem; font-weight: 700; color: {'#36c7a0' if is_income else '#e07a5f'};">
                         {'+ ' if is_income else '- '}{format_currency(amount)}
                     </div>
-                    <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+                    <div style="font-size: 0.875rem; color: rgba(200, 205, 213, 0.7); margin-top: 0.5rem;">
                         {'Income' if is_income else 'Expense'}
                     </div>
                 </div>
@@ -488,11 +611,11 @@ def render_restructured_review_screen(session, settings):
             <div class="smart-suggestion">
                 <div class="smart-suggestion-icon">🤖</div>
                 <div style="flex: 1;">
-                    <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.25rem;">
+                    <div style="font-weight: 600; color: #3b82f6; margin-bottom: 0.25rem;">
                         AI Suggestion
                     </div>
-                    <div style="color: #3730a3;">
-                        {'🏠 Personal' if current_txn.is_personal else '💼 Business'} • 
+                    <div style="color: rgba(200, 205, 213, 0.7);">
+                        {'🏠 Personal' if current_txn.is_personal else '💼 Business'} •
                         {current_txn.guessed_category if current_txn.guessed_category else 'Uncategorized'}
                     </div>
                 </div>
@@ -515,7 +638,7 @@ def render_restructured_review_screen(session, settings):
                 current_txn.reviewed = True
                 session.commit()
                 st.session_state.current_txn_index += 1
-                st.success("✅ Accepted AI suggestion")
+                show_toast("Accepted AI suggestion", "success")
                 st.rerun()
         
         with col2:
@@ -524,7 +647,7 @@ def render_restructured_review_screen(session, settings):
                 current_txn.reviewed = True
                 session.commit()
                 st.session_state.current_txn_index += 1
-                st.success("🏠 Marked as Personal")
+                show_toast("Marked as Personal", "info")
                 st.rerun()
         
         with col3:
@@ -581,7 +704,7 @@ def render_restructured_review_screen(session, settings):
                         session.commit()
                         st.session_state['show_category_selector'] = False
                         st.session_state.current_txn_index += 1
-                        st.success(f"✅ Categorized as {category}")
+                        show_toast(f"Categorized as {category}", "success")
                         st.rerun()
         
         # Navigation dots
@@ -684,10 +807,11 @@ def render_restructured_review_screen(session, settings):
         if st.session_state.get('selected_txns'):
             st.markdown(f"""
             <div style="
-                background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                background: linear-gradient(135deg, rgba(79, 143, 234, 0.15) 0%, rgba(79, 143, 234, 0.1) 100%);
                 padding: 1rem;
                 border-radius: 12px;
                 margin: 1rem 0;
+                color: #c8cdd5;
             ">
                 <strong>{len(st.session_state['selected_txns'])} transactions selected</strong>
             </div>
@@ -701,7 +825,7 @@ def render_restructured_review_screen(session, settings):
                         if txn:
                             txn.reviewed = True
                     session.commit()
-                    st.success(f"Marked {len(st.session_state['selected_txns'])} as reviewed")
+                    show_toast(f"Marked {len(st.session_state['selected_txns'])} as reviewed", "success")
                     st.session_state['selected_txns'] = []
                     st.rerun()
             with col2:
@@ -712,7 +836,7 @@ def render_restructured_review_screen(session, settings):
                             txn.is_personal = True
                             txn.reviewed = True
                     session.commit()
-                    st.success(f"Marked {len(st.session_state['selected_txns'])} as personal")
+                    show_toast(f"Marked {len(st.session_state['selected_txns'])} as personal", "info")
                     st.session_state['selected_txns'] = []
                     st.rerun()
             with col3:
@@ -725,51 +849,94 @@ def render_restructured_review_screen(session, settings):
                             txn.guessed_category = category
                             txn.reviewed = True
                     session.commit()
-                    st.success(f"Applied {category} to {len(st.session_state['selected_txns'])} transactions")
+                    show_toast(f"Applied {category} to {len(st.session_state['selected_txns'])} transactions", "success")
                     st.session_state['selected_txns'] = []
                     st.rerun()
         
-        # Transaction list
-        for txn in filtered_txns[:20]:  # Show max 20 at a time
+        # Transaction cards (staggered entrance)
+        page_size = 20
+        page_key = "review_list_page"
+        if page_key not in st.session_state:
+            st.session_state[page_key] = 0
+        total_pages = max(1, (len(filtered_txns) + page_size - 1) // page_size)
+        page_start = st.session_state[page_key] * page_size
+        page_slice = filtered_txns[page_start:page_start + page_size]
+
+        for idx, txn in enumerate(page_slice):
             amount = txn.paid_in if txn.paid_in > 0 else txn.paid_out
             is_income = txn.paid_in > 0
-            
-            col1, col2, col3, col4, col5 = st.columns([0.5, 3, 2, 2, 1])
-            
-            with col1:
+            color = "#36c7a0" if is_income else "#e07a5f"
+            sign = "+" if is_income else "-"
+            card_type = "income-card" if is_income else "expense-card"
+            is_selected = txn.id in st.session_state.get('selected_txns', [])
+            sel_class = " selected" if is_selected else ""
+            stagger = min(idx + 1, 8)
+
+            # Confidence badge
+            if txn.confidence_score >= 70:
+                conf_badge = f'<span class="review-txn-badge conf-high">{txn.confidence_score:.0f}%</span>'
+            elif txn.confidence_score >= 40:
+                conf_badge = f'<span class="review-txn-badge conf-med">{txn.confidence_score:.0f}%</span>'
+            elif txn.confidence_score > 0:
+                conf_badge = f'<span class="review-txn-badge conf-low">{txn.confidence_score:.0f}%</span>'
+            else:
+                conf_badge = ""
+
+            cat_text = txn.guessed_category or "Uncategorized"
+
+            # Render card as HTML + checkbox/button via Streamlit
+            ck_col, card_col, btn_col = st.columns([0.4, 5, 0.8])
+
+            with ck_col:
                 selected = st.checkbox(
-                    "", 
-                    value=txn.id in st.session_state.get('selected_txns', []),
-                    key=f"check_{txn.id}"
+                    "sel",
+                    value=is_selected,
+                    key=f"check_{txn.id}",
+                    label_visibility="collapsed",
                 )
                 if selected and txn.id not in st.session_state.get('selected_txns', []):
                     st.session_state['selected_txns'].append(txn.id)
                 elif not selected and txn.id in st.session_state.get('selected_txns', []):
                     st.session_state['selected_txns'].remove(txn.id)
-            
-            with col2:
-                st.markdown(f"**{txn.description[:40]}...**")
-                st.caption(f"📅 {txn.date.strftime('%d %b %Y')}")
-            
-            with col3:
-                st.markdown(f"**{'+ ' if is_income else '- '}{format_currency(amount)}**")
-                if txn.confidence_score > 0:
-                    st.caption(f"🤖 {txn.confidence_score:.0f}% confidence")
-            
-            with col4:
-                if txn.guessed_category:
-                    st.markdown(f"📁 {txn.guessed_category}")
-                else:
-                    st.markdown("❓ Uncategorized")
-            
-            with col5:
+
+            with card_col:
+                st.markdown(f"""
+                <div class="review-txn-card {card_type}{sel_class} mr-stagger-{stagger}">
+                    <div class="review-txn-desc">
+                        <div class="name">{txn.description[:50]}</div>
+                        <div class="meta">{txn.date.strftime('%d %b %Y')} &middot; {cat_text}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        {conf_badge}
+                        <div class="review-txn-amount" style="color: {color};">{sign}{format_currency(amount)}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with btn_col:
                 if st.button("Review", key=f"review_{txn.id}"):
                     st.session_state.review_mode = 'quick'
                     st.session_state.current_txn_index = unreviewed.index(txn)
                     st.rerun()
-        
-        if len(filtered_txns) > 20:
-            st.info(f"Showing first 20 of {len(filtered_txns)} transactions. Use filters to narrow down.")
+
+        # Pagination
+        if total_pages > 1:
+            pag_col1, pag_col2, pag_col3 = st.columns([1, 2, 1])
+            with pag_col1:
+                if st.button("Previous", disabled=st.session_state[page_key] == 0, key="review_prev"):
+                    st.session_state[page_key] -= 1
+                    st.rerun()
+            with pag_col2:
+                st.markdown(
+                    f"<div style='text-align:center; color: rgba(200,205,213,0.65); padding: 0.5rem;'>"
+                    f"Page {st.session_state[page_key] + 1} of {total_pages} &middot; "
+                    f"{len(filtered_txns)} transactions</div>",
+                    unsafe_allow_html=True,
+                )
+            with pag_col3:
+                if st.button("Next", disabled=st.session_state[page_key] >= total_pages - 1, key="review_next"):
+                    st.session_state[page_key] += 1
+                    st.rerun()
     
     elif st.session_state.review_mode == 'ai':
         # ====================================================================
@@ -818,7 +985,7 @@ def render_restructured_review_screen(session, settings):
                     st.markdown(f"""
                     <div class="smart-suggestion">
                         <div class="smart-suggestion-icon">🤖</div>
-                        <div>
+                        <div style="color: #c8cdd5;">
                             <strong>AI suggests:</strong> {transactions[0].guessed_category}
                             {'(Business)' if not transactions[0].is_personal else '(Personal)'}
                         </div>
@@ -832,16 +999,16 @@ def render_restructured_review_screen(session, settings):
                         for txn in transactions:
                             txn.reviewed = True
                         session.commit()
-                        st.success(f"Marked {len(transactions)} as reviewed")
+                        show_toast(f"Marked {len(transactions)} as reviewed", "success")
                         st.rerun()
-                
+
                 with col2:
                     if st.button(f"🏠 All Personal", key=f"personal_group_{group_name}"):
                         for txn in transactions:
                             txn.is_personal = True
                             txn.reviewed = True
                         session.commit()
-                        st.success(f"Marked {len(transactions)} as personal")
+                        show_toast(f"Marked {len(transactions)} as personal", "info")
                         st.rerun()
                 
                 with col3:
@@ -855,7 +1022,7 @@ def render_restructured_review_screen(session, settings):
                             txn.guessed_category = category
                             txn.reviewed = True
                         session.commit()
-                        st.success(f"Applied {category} to {len(transactions)} transactions")
+                        show_toast(f"Applied {category} to {len(transactions)} transactions", "success")
                         st.rerun()
                 
                 # Show individual transactions
@@ -878,13 +1045,14 @@ def render_restructured_review_screen(session, settings):
         if high_conf:
             st.markdown(f"""
             <div style="
-                background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+                background: linear-gradient(135deg, rgba(54, 199, 160, 0.2) 0%, rgba(54, 199, 160, 0.15) 100%);
                 padding: 1rem;
                 border-radius: 12px;
                 margin: 1rem 0;
+                color: #c8cdd5;
             ">
                 <strong>🟢 {len(high_conf)} transactions with high confidence</strong><br>
-                <small>These can likely be auto-approved</small>
+                <small style="color: rgba(200, 205, 213, 0.7);">These can likely be auto-approved</small>
             </div>
             """, unsafe_allow_html=True)
             
@@ -892,19 +1060,20 @@ def render_restructured_review_screen(session, settings):
                 for txn in high_conf:
                     txn.reviewed = True
                 session.commit()
-                st.success(f"Auto-approved {len(high_conf)} transactions")
+                show_toast(f"Auto-approved {len(high_conf)} transactions", "success")
                 st.rerun()
         
         # Recurring transactions
         st.markdown(f"""
         <div style="
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.15) 100%);
             padding: 1rem;
             border-radius: 12px;
             margin: 1rem 0;
+            color: #c8cdd5;
         ">
             <strong>🔄 Detected recurring transactions</strong><br>
-            <small>Set up rules for these to auto-categorize in future</small>
+            <small style="color: rgba(200, 205, 213, 0.7);">Set up rules for these to auto-categorize in future</small>
         </div>
         """, unsafe_allow_html=True)
         

@@ -210,17 +210,17 @@ def show_loading_skeleton(num_rows: int = 3):
             col1, col2, col3 = st.columns([2, 3, 2])
             with col1:
                 st.markdown(
-                    '<div style="background: #e0e0e0; height: 20px; border-radius: 4px;"></div>',
+                    '<div style="background: #c8cdd5; height: 20px; border-radius: 4px;"></div>',
                     unsafe_allow_html=True
                 )
             with col2:
                 st.markdown(
-                    '<div style="background: #e0e0e0; height: 20px; border-radius: 4px;"></div>',
+                    '<div style="background: #c8cdd5; height: 20px; border-radius: 4px;"></div>',
                     unsafe_allow_html=True
                 )
             with col3:
                 st.markdown(
-                    '<div style="background: #e0e0e0; height: 20px; border-radius: 4px;"></div>',
+                    '<div style="background: #c8cdd5; height: 20px; border-radius: 4px;"></div>',
                     unsafe_allow_html=True
                 )
             st.markdown("<br>", unsafe_allow_html=True)

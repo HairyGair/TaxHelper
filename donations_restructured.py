@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from models import Donation
 from utils import format_currency, get_tax_year_dates
+from components.ui.interactions import show_toast, confirm_delete, validate_field, show_validation
 
 def render_restructured_donations_screen(session, settings):
     """
@@ -330,7 +331,13 @@ def render_restructured_donations_screen(session, settings):
             submitted = st.form_submit_button("💝 Save Donation", type="primary", use_container_width=True)
             
             if submitted:
-                if charity_name and donation_amount > 0:
+                v_charity = validate_field(charity_name, required=True, min_length=2, label="Charity name")
+                v_amount = validate_field(donation_amount, required=True, min_value=0.01, label="Amount")
+                errors = [e for ok, e in [v_charity, v_amount] if not ok]
+                if errors:
+                    for err in errors:
+                        show_validation(False, err)
+                else:
                     new_donation = Donation(
                         date=donation_date,
                         charity=charity_name,
@@ -340,20 +347,8 @@ def render_restructured_donations_screen(session, settings):
                     )
                     session.add(new_donation)
                     session.commit()
-                    
-                    if gift_aid:
-                        st.success(f"""
-                        ✅ Donation added! 
-                        
-                        The charity will receive {format_currency(donation_amount * 1.25)} with Gift Aid.
-                        You can claim back {format_currency(donation_amount * 0.25)} if you're a 40% taxpayer.
-                        """)
-                    else:
-                        st.success(f"✅ Donation of {format_currency(donation_amount)} to {charity_name} recorded!")
-                    
-                    st.balloons()
-                else:
-                    st.error("❌ Please provide charity name and amount")
+                    ga_label = " (Gift Aid)" if gift_aid else ""
+                    show_toast(f"Donation saved — {format_currency(donation_amount)} to {charity_name}{ga_label}", "success")
     
     with tab3:
         # ====================================================================
@@ -415,19 +410,21 @@ def render_restructured_donations_screen(session, settings):
                 fig.update_layout(
                     height=400,
                     hovermode='x unified',
-                    plot_bgcolor='white',
-                    paper_bgcolor='white',
+                    plot_bgcolor='#12161f',
+                    paper_bgcolor='#12161f',
                     yaxis=dict(
-                        title='Amount (£)',
+                        title=dict(text='Amount (£)', font=dict(color='#c8cdd5')),
+                        tickfont=dict(color='#c8cdd5'),
                         showgrid=True,
-                        gridcolor='#f0f0f0'
+                        gridcolor='rgba(79, 143, 234, 0.08)'
                     ),
                     yaxis2=dict(
-                        title='Number of Donations',
+                        title=dict(text='Number of Donations', font=dict(color='#c8cdd5')),
+                        tickfont=dict(color='#c8cdd5'),
                         overlaying='y',
                         side='right'
                     ),
-                    xaxis=dict(title=''),
+                    xaxis=dict(title='', tickfont=dict(color='#c8cdd5')),
                     showlegend=True
                 )
                 
@@ -557,15 +554,18 @@ def render_restructured_donations_screen(session, settings):
                                 donation.gift_aid = new_gift_aid
                                 donation.notes = new_notes
                                 session.commit()
-                                st.success("✅ Donation updated successfully!")
+                                show_toast(f"Donation #{donation.id} updated", "success")
                                 st.rerun()
                     
                     elif action == "Delete":
-                        st.warning("⚠️ This action cannot be undone!")
-                        if st.button("🗑️ Delete Donation", type="secondary"):
+                        if confirm_delete(
+                            f"donation_{donation.id}",
+                            f"Donation #{donation.id}",
+                            f"{donation.charity} — {format_currency(donation.amount_paid)} on {donation.date.strftime('%d %B %Y')}"
+                        ):
                             session.delete(donation)
                             session.commit()
-                            st.success("✅ Donation deleted successfully!")
+                            show_toast(f"Donation #{donation.id} deleted", "delete")
                             st.rerun()
                 else:
                     st.error("❌ Donation not found")

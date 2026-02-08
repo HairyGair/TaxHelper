@@ -687,7 +687,7 @@ def render_receipt_indicator(receipt_link: Optional[str]) -> str:
     count = len(receipt_paths)
     badge_html = f"""
     <span style="
-        background-color: #28a745;
+        background-color: #36c7a0;
         color: white;
         padding: 2px 8px;
         border-radius: 12px;

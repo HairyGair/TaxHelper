@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from models import Mileage
 from utils import format_currency, get_tax_year_dates, calculate_mileage_allowance
+from components.ui.interactions import show_toast, confirm_delete, validate_field, show_validation
 
 def render_restructured_mileage_screen(session, settings):
     """
@@ -290,7 +291,13 @@ def render_restructured_mileage_screen(session, settings):
             submitted = st.form_submit_button("🚗 Save Journey", type="primary", use_container_width=True)
             
             if submitted:
-                if journey_purpose and journey_miles > 0:
+                v_purpose = validate_field(journey_purpose, required=True, min_length=3, label="Purpose")
+                v_miles = validate_field(journey_miles, required=True, min_value=0.1, max_value=9999, label="Miles")
+                errors = [e for ok, e in [v_purpose, v_miles] if not ok]
+                if errors:
+                    for err in errors:
+                        show_validation(False, err)
+                else:
                     new_journey = Mileage(
                         date=journey_date,
                         purpose=journey_purpose,
@@ -303,10 +310,7 @@ def render_restructured_mileage_screen(session, settings):
                     )
                     session.add(new_journey)
                     session.commit()
-                    st.success(f"✅ Journey added! Claimable amount: {format_currency(calculated_allowance)}")
-                    st.balloons()
-                else:
-                    st.error("❌ Please provide purpose and miles")
+                    show_toast(f"Journey saved — {journey_miles:.0f} miles, {format_currency(calculated_allowance)} claimable", "success")
     
     with tab3:
         # ====================================================================
@@ -360,28 +364,31 @@ def render_restructured_mileage_screen(session, settings):
                 y=amount_data,
                 yaxis='y2',
                 mode='lines+markers',
-                line=dict(color='#10b981', width=3),
+                line=dict(color='#36c7a0', width=3),
                 marker=dict(size=10)
             ))
             
             fig.update_layout(
                 height=400,
                 hovermode='x unified',
-                plot_bgcolor='white',
-                paper_bgcolor='white',
+                plot_bgcolor='#12161f',
+                paper_bgcolor='#12161f',
                 yaxis=dict(
-                    title='Miles',
+                    title=dict(text='Miles', font=dict(color='#c8cdd5')),
+                    tickfont=dict(color='#c8cdd5'),
                     showgrid=True,
-                    gridcolor='#f0f0f0'
+                    gridcolor='rgba(79, 143, 234, 0.08)'
                 ),
                 yaxis2=dict(
-                    title='Allowance (£)',
+                    title=dict(text='Allowance (£)', font=dict(color='#c8cdd5')),
+                    tickfont=dict(color='#c8cdd5'),
                     overlaying='y',
                     side='right',
                     showgrid=False
                 ),
                 xaxis=dict(
                     title='',
+                    tickfont=dict(color='#c8cdd5'),
                     showgrid=False
                 ),
                 legend=dict(
@@ -463,14 +470,14 @@ def render_restructured_mileage_screen(session, settings):
                 delta = {'reference': 10000},
                 domain = {'x': [0, 1], 'y': [0, 1]},
                 gauge = {
-                    'axis': {'range': [None, 10000]},
-                    'bar': {'color': "#3b82f6"},
-                    'bgcolor': "white",
+                    'axis': {'range': [None, 10000], 'tickfont': {'color': '#c8cdd5'}},
+                    'bar': {'color': "#4f8fea"},
+                    'bgcolor': "#12161f",
                     'borderwidth': 2,
-                    'bordercolor': "#e0e7ff",
+                    'bordercolor': "rgba(79, 143, 234, 0.08)",
                     'steps': [
-                        {'range': [0, 5000], 'color': '#dbeafe'},
-                        {'range': [5000, 10000], 'color': '#bfdbfe'}
+                        {'range': [0, 5000], 'color': '#181d28'},
+                        {'range': [5000, 10000], 'color': '#0b0e14'}
                     ],
                     'threshold': {
                         'line': {'color': "red", 'width': 4},
@@ -541,15 +548,18 @@ def render_restructured_mileage_screen(session, settings):
                                 journey.allowable_amount = new_miles * new_rate
                                 journey.notes = new_notes
                                 session.commit()
-                                st.success("✅ Journey updated successfully!")
+                                show_toast(f"Journey #{journey.id} updated", "success")
                                 st.rerun()
                     
                     elif action == "Delete":
-                        st.warning("⚠️ This action cannot be undone!")
-                        if st.button("🗑️ Delete Journey", type="secondary"):
+                        if confirm_delete(
+                            f"mileage_{journey.id}",
+                            f"Journey #{journey.id}",
+                            f"{journey.purpose} — {journey.miles:.1f} miles on {journey.date.strftime('%d %B %Y')}"
+                        ):
                             session.delete(journey)
                             session.commit()
-                            st.success("✅ Journey deleted successfully!")
+                            show_toast(f"Journey #{journey.id} deleted", "delete")
                             st.rerun()
                 else:
                     st.error("❌ Journey not found")

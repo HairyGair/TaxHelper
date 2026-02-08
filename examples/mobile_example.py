@@ -198,7 +198,7 @@ def main():
                 <div style="font-weight: 600; color: #374151; margin-bottom: 0.25rem;">
                     {category['name']}
                 </div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: #667eea;">
+                <div style="font-size: 1.5rem; font-weight: 700; color: #4f8fea;">
                     {format_number_for_mobile(category['amount'])}
                 </div>
             </div>

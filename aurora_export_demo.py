@@ -72,7 +72,7 @@ div[style*="background"] div {
 div[style*="rgba(21, 25, 52"] *,
 div[style*="rgba(139, 92, 246"] *,
 div[style*="rgba(59, 130, 246"] *,
-div[style*="rgba(16, 185, 129"] *,
+div[style*="rgba(54, 199, 160"] *,
 div[style*="rgba(236, 72, 153"] * {
     color: inherit !important;
 }
@@ -203,9 +203,9 @@ with col3:
     unique_categories = sample_data['Category'].nunique()
     st.markdown("""
     <div style="
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%);
+        background: linear-gradient(135deg, rgba(54, 199, 160, 0.2) 0%, rgba(54, 199, 160, 0.1) 100%);
         backdrop-filter: blur(10px);
-        border: 1px solid rgba(16, 185, 129, 0.3);
+        border: 1px solid rgba(54, 199, 160, 0.3);
         border-radius: 16px;
         padding: 24px;
         text-align: center;
@@ -307,8 +307,8 @@ st.markdown("""
         </div>
 
         <div style="
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
-            border: 1px solid rgba(16, 185, 129, 0.2);
+            background: linear-gradient(135deg, rgba(54, 199, 160, 0.1) 0%, rgba(54, 199, 160, 0.05) 100%);
+            border: 1px solid rgba(54, 199, 160, 0.2);
             border-radius: 12px;
             padding: 20px;
         ">

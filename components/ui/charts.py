@@ -16,23 +16,23 @@ from utils import format_currency
 
 # Color scheme matching UI theme
 COLORS = {
-    'primary': '#667eea',
-    'secondary': '#764ba2',
-    'success': '#28a745',
-    'danger': '#dc3545',
-    'info': '#007bff',
-    'warning': '#ffc107',
-    'purple': '#6f42c1',
-    'teal': '#20c997',
-    'orange': '#fd7e14',
+    'primary': '#4f8fea',
+    'secondary': '#3a6db8',
+    'success': '#36c7a0',
+    'danger': '#e07a5f',
+    'info': '#7aafff',
+    'warning': '#e5b567',
+    'purple': '#7aafff',
+    'teal': '#4f8fea',
+    'orange': '#e07a5f',
 }
 
 # Chart theme settings
 CHART_THEME = {
     'paper_bgcolor': 'rgba(0,0,0,0)',
     'plot_bgcolor': 'rgba(0,0,0,0)',
-    'font': {'family': 'Arial, sans-serif', 'size': 12, 'color': '#495057'},
-    'title_font': {'size': 16, 'color': '#212529', 'family': 'Arial, sans-serif'},
+    'font': {'family': 'Arial, sans-serif', 'size': 12, 'color': '#c8cdd5'},
+    'title_font': {'size': 16, 'color': '#c8cdd5', 'family': 'Arial, sans-serif'},
 }
 
 
@@ -620,7 +620,7 @@ def render_category_trend_chart(session, category: str, start_date: datetime, en
             line=dict(color=COLORS['primary'], width=3),
             marker=dict(size=8, symbol='circle'),
             fill='tozeroy',
-            fillcolor=f'rgba(102, 126, 234, 0.1)',
+            fillcolor=f'rgba(79, 143, 234, 0.1)',
             hovertemplate=f'<b>{category}</b><br>' +
                          f'{period_label}: %{{x|{date_format}}}<br>' +
                          'Amount: £%{y:,.2f}<br>' +

@@ -26,7 +26,7 @@ def _render_compact_reference():
     st.markdown("""
         <style>
         .compact-shortcuts {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4f8fea 0%, #3a6db8 100%);
             color: white;
             padding: 12px;
             border-radius: 8px;
@@ -99,7 +99,7 @@ def _render_full_reference():
             margin: 20px 0;
         }
         .reference-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4f8fea 0%, #3a6db8 100%);
             color: white;
             padding: 20px;
             text-align: center;
@@ -120,10 +120,10 @@ def _render_full_reference():
             margin-bottom: 24px;
         }
         .shortcut-section h3 {
-            color: #667eea;
+            color: #4f8fea;
             margin: 0 0 12px 0;
             font-size: 18px;
-            border-bottom: 2px solid #e0e0e0;
+            border-bottom: 2px solid #c8cdd5;
             padding-bottom: 8px;
         }
         .shortcut-grid {
@@ -155,7 +155,7 @@ def _render_full_reference():
         .key-badge {
             font-family: monospace;
             background: white;
-            border: 2px solid #e0e0e0;
+            border: 2px solid #c8cdd5;
             padding: 4px 8px;
             border-radius: 4px;
             font-weight: bold;
@@ -164,7 +164,7 @@ def _render_full_reference():
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .key-badge.special {
-            background: #FFC107;
+            background: #e5b567;
             border-color: #FFA000;
             color: #000;
         }
@@ -175,7 +175,7 @@ def _render_full_reference():
         }
         .tips-section {
             background: #fff3cd;
-            border-left: 4px solid #FFC107;
+            border-left: 4px solid #e5b567;
             padding: 16px;
             border-radius: 4px;
             margin-top: 20px;
@@ -439,7 +439,7 @@ def render_floating_shortcut_hint(text: str, shortcut: str):
             border-radius: 16px;
             font-size: 12px;
             color: #666;
-            border: 1px solid #e0e0e0;
+            border: 1px solid #c8cdd5;
         '>
             <span>{text}</span>
             <kbd style='

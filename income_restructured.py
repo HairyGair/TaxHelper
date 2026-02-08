@@ -11,25 +11,26 @@ import plotly.graph_objects as go
 import plotly.express as px
 from models import Income, INCOME_TYPES
 from utils import format_currency
+from components.ui.interactions import show_toast, confirm_delete, validate_field, show_validation
 
 def render_restructured_income_screen(session, settings):
     """
     Render a completely restructured income page with modern interface
     """
 
-    # Custom CSS for the income page - Modern gradient and animations
+    # Custom CSS for the income page - Obsidian dark theme
     st.markdown("""
     <style>
     /* Income Page Specific Styling */
     .income-header {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        background: linear-gradient(135deg, #36c7a0 0%, #059669 100%);
         color: white;
         padding: 3rem 2rem;
         border-radius: 24px;
         margin-bottom: 2rem;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 20px 60px rgba(16, 185, 129, 0.3);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
     }
 
     .income-header::before {
@@ -60,31 +61,31 @@ def render_restructured_income_screen(session, settings):
     }
 
     .status-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.85);
         border-radius: 16px;
         padding: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        border: 1px solid #f0f0f0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+        border: 1px solid rgba(79, 143, 234, 0.08);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         height: 100%;
     }
 
     .status-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 30px rgba(16, 185, 129, 0.15);
+        box-shadow: 0 8px 30px rgba(54, 199, 160, 0.15);
     }
 
     .metric-value {
         font-size: 2.5rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        background: linear-gradient(135deg, #36c7a0 0%, #059669 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin: 0.5rem 0;
     }
 
     .metric-label {
-        color: #64748b;
+        color: rgba(200, 205, 213, 0.45);
         font-size: 0.875rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -93,20 +94,20 @@ def render_restructured_income_screen(session, settings):
     }
 
     .income-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.85);
         border-radius: 20px;
         padding: 2rem;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
         margin-bottom: 1.5rem;
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
-        border: 1px solid #f0f0f0;
+        border: 1px solid rgba(79, 143, 234, 0.08);
     }
 
     .income-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 15px 50px rgba(16, 185, 129, 0.15);
+        box-shadow: 0 15px 50px rgba(54, 199, 160, 0.15);
     }
 
     .income-card::before {
@@ -116,34 +117,34 @@ def render_restructured_income_screen(session, settings):
         left: 0;
         width: 6px;
         height: 100%;
-        background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+        background: linear-gradient(135deg, #36c7a0 0%, #36c7a0 100%);
     }
 
     .income-source {
         font-size: 1.5rem;
         font-weight: 700;
-        color: #1f2937;
+        color: #c8cdd5;
         margin-bottom: 0.5rem;
     }
 
     .income-amount {
         font-size: 2.5rem;
         font-weight: 800;
-        color: #10b981;
+        color: #36c7a0;
         margin: 0.5rem 0;
     }
 
     .income-details {
-        color: #64748b;
+        color: rgba(200, 205, 213, 0.45);
         font-size: 0.95rem;
         line-height: 1.8;
     }
 
     .add-income-section {
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
         border-radius: 20px;
         padding: 2rem;
-        border: 2px solid #86efac;
+        border: 2px solid #36c7a0;
         margin: 2rem 0;
     }
 
@@ -159,35 +160,35 @@ def render_restructured_income_screen(session, settings):
     }
 
     .edit-section {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
         border-radius: 20px;
         padding: 2rem;
         margin: 2rem 0;
-        border: 2px solid #fbbf24;
+        border: 2px solid #4f8fea;
     }
 
     .analytics-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.85);
         border-radius: 20px;
         padding: 2rem;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
         margin: 1rem 0;
     }
 
     .timeline-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.85);
         border-radius: 16px;
         padding: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
         margin: 1rem 0;
     }
 
     .empty-state {
         text-align: center;
         padding: 4rem 2rem;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
         border-radius: 20px;
-        border: 2px dashed #cbd5e1;
+        border: 2px dashed rgba(79, 143, 234, 0.08);
     }
 
     .empty-state-icon {
@@ -197,7 +198,7 @@ def render_restructured_income_screen(session, settings):
     }
 
     .action-button {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        background: linear-gradient(135deg, #36c7a0 0%, #059669 100%);
         color: white;
         border: none;
         padding: 0.75rem 1.5rem;
@@ -212,19 +213,19 @@ def render_restructured_income_screen(session, settings):
 
     .action-button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        box-shadow: 0 10px 25px rgba(54, 199, 160, 0.3);
     }
 
     .filter-section {
-        background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
         border-radius: 16px;
         padding: 1.5rem;
         margin: 2rem 0;
     }
 
     .summary-banner {
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-        border-left: 6px solid #10b981;
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
+        border-left: 6px solid #36c7a0;
         padding: 1.5rem;
         border-radius: 12px;
         margin: 1rem 0;
@@ -246,6 +247,31 @@ def render_restructured_income_screen(session, settings):
         border-radius: 12px;
         font-weight: 600;
         display: inline-block;
+    }
+
+    .mr-chart-filter {
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
+        border-left: 6px solid #4f8fea;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin: 1.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .mr-chart-filter .filter-label {
+        color: rgba(200, 205, 213, 0.45);
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .mr-chart-filter .filter-value {
+        color: #4f8fea;
+        font-size: 1.1rem;
+        font-weight: 700;
     }
 
     </style>
@@ -326,7 +352,7 @@ def render_restructured_income_screen(session, settings):
                 <div class="status-card">
                     <div class="metric-label">Total Gross Income</div>
                     <div class="metric-value">{}</div>
-                    <div style="color: #10b981; font-size: 0.875rem; margin-top: 0.5rem;">
+                    <div style="color: #36c7a0; font-size: 0.875rem; margin-top: 0.5rem;">
                         {} payment(s)
                     </div>
                 </div>
@@ -337,11 +363,11 @@ def render_restructured_income_screen(session, settings):
                 <div class="status-card">
                     <div class="metric-label">Tax Deducted</div>
                     <div class="metric-value" style="
-                        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                        background: linear-gradient(135deg, #e07a5f 0%, #dc2626 100%);
                         -webkit-background-clip: text;
                         -webkit-text-fill-color: transparent;
                     ">{}</div>
-                    <div style="color: #ef4444; font-size: 0.875rem; margin-top: 0.5rem;">
+                    <div style="color: #e07a5f; font-size: 0.875rem; margin-top: 0.5rem;">
                         {:.1f}% effective rate
                     </div>
                 </div>
@@ -415,7 +441,7 @@ def render_restructured_income_screen(session, settings):
                     name='Net Income',
                     x=months_display,
                     y=net_amounts,
-                    marker_color='#10b981',
+                    marker_color='#36c7a0',
                     text=[format_currency(v) for v in net_amounts],
                     textposition='outside',
                     hovertemplate='<b>Net Income</b><br>%{x}<br>£%{y:,.2f}<extra></extra>'
@@ -426,7 +452,7 @@ def render_restructured_income_screen(session, settings):
                     name='Tax Deducted',
                     x=months_display,
                     y=tax_amounts,
-                    marker_color='#ef4444',
+                    marker_color='#e07a5f',
                     text=[format_currency(v) for v in tax_amounts],
                     textposition='outside',
                     hovertemplate='<b>Tax Deducted</b><br>%{x}<br>£%{y:,.2f}<extra></extra>'
@@ -438,7 +464,7 @@ def render_restructured_income_screen(session, settings):
                     x=months_display,
                     y=gross_amounts,
                     mode='lines+markers',
-                    line=dict(color='#667eea', width=3),
+                    line=dict(color='#4f8fea', width=3),
                     marker=dict(size=10, symbol='diamond'),
                     hovertemplate='<b>Gross Income</b><br>%{x}<br>£%{y:,.2f}<extra></extra>'
                 ))
@@ -447,17 +473,19 @@ def render_restructured_income_screen(session, settings):
                     barmode='stack',
                     height=450,
                     showlegend=True,
-                    plot_bgcolor='white',
-                    paper_bgcolor='white',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
                     xaxis=dict(
                         showgrid=False,
                         title="",
-                        tickangle=-45
+                        tickangle=-45,
+                        color='#c8cdd5'
                     ),
                     yaxis=dict(
                         title="Amount (£)",
                         showgrid=True,
-                        gridcolor='#f0f0f0'
+                        gridcolor='rgba(79, 143, 234, 0.08)',
+                        color='#c8cdd5'
                     ),
                     hovermode='x unified',
                     legend=dict(
@@ -465,20 +493,43 @@ def render_restructured_income_screen(session, settings):
                         yanchor="bottom",
                         y=1.02,
                         xanchor="right",
-                        x=1
+                        x=1,
+                        font=dict(color='#c8cdd5')
                     ),
-                    margin=dict(l=50, r=50, t=50, b=100)
+                    margin=dict(l=50, r=50, t=50, b=100),
+                    font=dict(color='#c8cdd5')
                 )
 
                 st.plotly_chart(fig, use_container_width=True)
+
+            # Chart drill-down filter
+            all_sources = sorted(set(r.source for r in income_records))
+            filter_src = st.selectbox(
+                "Drill down by source",
+                ["All Sources"] + all_sources,
+                key="income_chart_filter",
+                label_visibility="collapsed",
+            )
+
+            if filter_src != "All Sources":
+                st.markdown(f"""
+                <div class="mr-chart-filter">
+                    <span class="filter-label">Filtered by:</span>
+                    <span class="filter-value">{filter_src}</span>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("Clear filter", key="clear_income_filter"):
+                    st.session_state.income_chart_filter = "All Sources"
+                    st.rerun()
 
             # Income Records List - Grouped by Source
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("### Income Records by Source")
 
             # Group by source for better organization
+            _display_records = income_records if filter_src == "All Sources" else [r for r in income_records if r.source == filter_src]
             sources = {}
-            for record in income_records:
+            for record in _display_records:
                 if record.source not in sources:
                     sources[record.source] = []
                 sources[record.source].append(record)
@@ -498,7 +549,7 @@ def render_restructured_income_screen(session, settings):
 
                 with st.expander(
                     f"**{source}** - {len(records)} payment(s) - {format_currency(source_total)} gross",
-                    expanded=False
+                    expanded=(filter_src != "All Sources")
                 ):
                     # Source summary
                     st.markdown(f"""
@@ -506,19 +557,19 @@ def render_restructured_income_screen(session, settings):
                         <strong style="font-size: 1.25rem;">{source}</strong><br>
                         <div style="margin-top: 1rem; display: flex; gap: 2rem; flex-wrap: wrap;">
                             <div>
-                                <span style="color: #64748b;">Gross:</span>
-                                <strong style="color: #10b981; font-size: 1.1rem;">{format_currency(source_total)}</strong>
+                                <span style="color: rgba(200, 205, 213, 0.45);">Gross:</span>
+                                <strong style="color: #36c7a0; font-size: 1.1rem;">{format_currency(source_total)}</strong>
                             </div>
                             <div>
-                                <span style="color: #64748b;">Tax:</span>
-                                <strong style="color: #ef4444; font-size: 1.1rem;">-{format_currency(source_tax)}</strong>
+                                <span style="color: rgba(200, 205, 213, 0.45);">Tax:</span>
+                                <strong style="color: #e07a5f; font-size: 1.1rem;">-{format_currency(source_tax)}</strong>
                             </div>
                             <div>
-                                <span style="color: #64748b;">Net:</span>
+                                <span style="color: rgba(200, 205, 213, 0.45);">Net:</span>
                                 <strong style="color: #3b82f6; font-size: 1.1rem;">{format_currency(source_net)}</strong>
                             </div>
                             <div>
-                                <span style="color: #64748b;">Payments:</span>
+                                <span style="color: rgba(200, 205, 213, 0.45);">Payments:</span>
                                 <strong style="font-size: 1.1rem;">{len(records)}</strong>
                             </div>
                         </div>
@@ -546,7 +597,7 @@ def render_restructured_income_screen(session, settings):
                                     <div class="net-indicator">
                                         Net: {format_currency(record.amount_gross - record.tax_deducted)}
                                     </div>
-                                    <div style="margin-top: 1rem; color: #94a3b8; font-size: 0.8rem;">
+                                    <div style="margin-top: 1rem; color: rgba(200, 205, 213, 0.45); font-size: 0.8rem;">
                                         Record ID: {record.id}
                                     </div>
                                 </div>
@@ -559,11 +610,11 @@ def render_restructured_income_screen(session, settings):
             st.markdown("""
             <div class="empty-state">
                 <div class="empty-state-icon"></div>
-                <h2 style="color: #1f2937; margin-bottom: 0.5rem;">No Income Records Found</h2>
-                <p style="color: #64748b; font-size: 1.1rem;">
+                <h2 style="color: #c8cdd5; margin-bottom: 0.5rem;">No Income Records Found</h2>
+                <p style="color: rgba(200, 205, 213, 0.45); font-size: 1.1rem;">
                     Add your first income record to start tracking your earnings
                 </p>
-                <p style="color: #94a3b8; margin-top: 1rem;">
+                <p style="color: rgba(200, 205, 213, 0.45); margin-top: 1rem;">
                     Use the "Add New Income" tab to get started
                 </p>
             </div>
@@ -576,8 +627,8 @@ def render_restructured_income_screen(session, settings):
 
         st.markdown("""
         <div class="add-income-section">
-            <h2 style="color: #166534; margin: 0 0 0.5rem 0;">Add New Income Record</h2>
-            <p style="color: #15803d; margin: 0;">Enter details of your income payment below</p>
+            <h2 style="color: #36c7a0; margin: 0 0 0.5rem 0;">Add New Income Record</h2>
+            <p style="color: rgba(200, 205, 213, 0.7); margin: 0;">Enter details of your income payment below</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -630,13 +681,13 @@ def render_restructured_income_screen(session, settings):
                     tax_rate = (income_tax / income_amount) * 100
                     st.markdown(f"""
                     <div style="
-                        background: #fee2e2;
+                        background: rgba(224, 122, 95, 0.15);
                         padding: 0.75rem;
                         border-radius: 8px;
                         margin: 1rem 0;
                     ">
-                        <strong style="color: #991b1b;">Effective Tax Rate:</strong>
-                        <span style="color: #dc2626; font-size: 1.2rem; font-weight: 700;">
+                        <strong style="color: #e07a5f;">Effective Tax Rate:</strong>
+                        <span style="color: #e07a5f; font-size: 1.2rem; font-weight: 700;">
                             {tax_rate:.1f}%
                         </span>
                     </div>
@@ -652,20 +703,20 @@ def render_restructured_income_screen(session, settings):
             net_amount = income_amount - income_tax
             st.markdown(f"""
             <div style="
-                background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-                border: 3px solid #10b981;
+                background: rgba(54, 199, 160, 0.15);
+                border: 3px solid #36c7a0;
                 border-radius: 16px;
                 padding: 1.5rem;
                 margin: 1.5rem 0;
                 text-align: center;
             ">
-                <div style="color: #065f46; font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">
+                <div style="color: #36c7a0; font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">
                     NET INCOME (AFTER TAX)
                 </div>
-                <div style="color: #065f46; font-size: 3rem; font-weight: 800;">
+                <div style="color: #36c7a0; font-size: 3rem; font-weight: 800;">
                     {format_currency(net_amount)}
                 </div>
-                {f'<div style="color: #047857; font-size: 0.9rem; margin-top: 0.5rem;">Tax Deducted: {format_currency(income_tax)} ({(income_tax / income_amount * 100):.1f}%)</div>' if income_tax > 0 else ''}
+                {f'<div style="color: rgba(200, 205, 213, 0.7); font-size: 0.9rem; margin-top: 0.5rem;">Tax Deducted: {format_currency(income_tax)} ({(income_tax / income_amount * 100):.1f}%)</div>' if income_tax > 0 else ''}
             </div>
             """, unsafe_allow_html=True)
 
@@ -679,7 +730,16 @@ def render_restructured_income_screen(session, settings):
                 )
 
             if submitted:
-                if income_source and income_amount > 0:
+                # Validate all fields
+                v_source = validate_field(income_source, required=True, min_length=2, label="Source")
+                v_amount = validate_field(income_amount, required=True, min_value=0.01, max_value=999999, label="Gross Amount")
+                v_tax = validate_field(income_tax, max_value=income_amount if income_amount > 0 else 999999, label="Tax Deducted")
+
+                errors = [e for ok, e in [v_source, v_amount, v_tax] if not ok]
+                if errors:
+                    for err in errors:
+                        show_validation(False, err)
+                else:
                     new_income = Income(
                         date=income_date,
                         source=income_source,
@@ -691,11 +751,8 @@ def render_restructured_income_screen(session, settings):
                     )
                     session.add(new_income)
                     session.commit()
-                    st.success("Income record added successfully!")
-                    st.balloons()
+                    show_toast(f"Income record saved — {format_currency(income_amount)} from {income_source}", "success")
                     st.rerun()
-                else:
-                    st.error("Please provide both source name and gross amount")
 
     with tab3:
         # ============================================================================
@@ -719,13 +776,13 @@ def render_restructured_income_screen(session, settings):
             with col1:
                 st.markdown(f"""
                 <div class="analytics-card" style="text-align: center;">
-                    <div style="color: #64748b; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
+                    <div style="color: rgba(200, 205, 213, 0.45); font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
                         ALL-TIME GROSS INCOME
                     </div>
-                    <div style="font-size: 3rem; font-weight: 800; color: #10b981;">
+                    <div style="font-size: 3rem; font-weight: 800; color: #36c7a0;">
                         {format_currency(total_all_gross)}
                     </div>
-                    <div style="color: #64748b; font-size: 0.9rem; margin-top: 0.5rem;">
+                    <div style="color: rgba(200, 205, 213, 0.45); font-size: 0.9rem; margin-top: 0.5rem;">
                         From {len(all_income)} payments
                     </div>
                 </div>
@@ -735,13 +792,13 @@ def render_restructured_income_screen(session, settings):
                 effective_rate = (total_all_tax / total_all_gross * 100) if total_all_gross > 0 else 0
                 st.markdown(f"""
                 <div class="analytics-card" style="text-align: center;">
-                    <div style="color: #64748b; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
+                    <div style="color: rgba(200, 205, 213, 0.45); font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
                         EFFECTIVE TAX RATE
                     </div>
-                    <div style="font-size: 3rem; font-weight: 800; color: #ef4444;">
+                    <div style="font-size: 3rem; font-weight: 800; color: #e07a5f;">
                         {effective_rate:.1f}%
                     </div>
-                    <div style="color: #64748b; font-size: 0.9rem; margin-top: 0.5rem;">
+                    <div style="color: rgba(200, 205, 213, 0.45); font-size: 0.9rem; margin-top: 0.5rem;">
                         Total tax: {format_currency(total_all_tax)}
                     </div>
                 </div>
@@ -751,13 +808,13 @@ def render_restructured_income_screen(session, settings):
                 unique_sources = len(set(r.source for r in all_income))
                 st.markdown(f"""
                 <div class="analytics-card" style="text-align: center;">
-                    <div style="color: #64748b; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
+                    <div style="color: rgba(200, 205, 213, 0.45); font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
                         INCOME SOURCES
                     </div>
                     <div style="font-size: 3rem; font-weight: 800; color: #8b5cf6;">
                         {unique_sources}
                     </div>
-                    <div style="color: #64748b; font-size: 0.9rem; margin-top: 0.5rem;">
+                    <div style="color: rgba(200, 205, 213, 0.45); font-size: 0.9rem; margin-top: 0.5rem;">
                         Active clients
                     </div>
                 </div>
@@ -798,15 +855,16 @@ def render_restructured_income_screen(session, settings):
                 fig_pie.update_layout(
                     height=400,
                     showlegend=True,
-                    plot_bgcolor='white',
-                    paper_bgcolor='white',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
                     margin=dict(l=20, r=20, t=40, b=20),
                     legend=dict(
                         orientation="v",
                         yanchor="middle",
                         y=0.5,
                         xanchor="left",
-                        x=1.05
+                        x=1.05,
+                        font=dict(color='#c8cdd5')
                     )
                 )
 
@@ -853,11 +911,12 @@ def render_restructured_income_screen(session, settings):
                     xaxis_title="Total Income (£)",
                     yaxis_title="",
                     showlegend=False,
-                    plot_bgcolor='white',
-                    paper_bgcolor='white',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
                     margin=dict(l=10, r=100, t=40, b=50),
-                    xaxis=dict(showgrid=True, gridcolor='#f0f0f0'),
-                    yaxis=dict(showgrid=False)
+                    xaxis=dict(showgrid=True, gridcolor='rgba(79, 143, 234, 0.08)', color='#c8cdd5'),
+                    yaxis=dict(showgrid=False, color='#c8cdd5'),
+                    font=dict(color='#c8cdd5')
                 )
 
                 st.plotly_chart(fig_bar, use_container_width=True)
@@ -893,10 +952,10 @@ def render_restructured_income_screen(session, settings):
                 x=months_display,
                 y=gross_trend,
                 name='Gross Income',
-                line=dict(color='#10b981', width=3),
-                marker=dict(size=10, color='#10b981'),
+                line=dict(color='#36c7a0', width=3),
+                marker=dict(size=10, color='#36c7a0'),
                 fill='tozeroy',
-                fillcolor='rgba(16, 185, 129, 0.1)',
+                fillcolor='rgba(54, 199, 160, 0.1)',
                 hovertemplate='<b>Gross</b><br>%{x}<br>£%{y:,.2f}<extra></extra>'
             ))
 
@@ -915,28 +974,32 @@ def render_restructured_income_screen(session, settings):
                 height=450,
                 showlegend=True,
                 hovermode='x unified',
-                plot_bgcolor='white',
-                paper_bgcolor='white',
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
                 yaxis=dict(
                     title="Amount (£)",
                     showgrid=True,
-                    gridcolor='#f0f0f0',
+                    gridcolor='rgba(79, 143, 234, 0.08)',
                     zeroline=True,
-                    zerolinecolor='#cbd5e1'
+                    zerolinecolor='rgba(79, 143, 234, 0.08)',
+                    color='#c8cdd5'
                 ),
                 xaxis=dict(
                     title="",
                     showgrid=False,
-                    tickangle=-45
+                    tickangle=-45,
+                    color='#c8cdd5'
                 ),
                 legend=dict(
                     orientation="h",
                     yanchor="bottom",
                     y=1.02,
                     xanchor="right",
-                    x=1
+                    x=1,
+                    font=dict(color='#c8cdd5')
                 ),
-                margin=dict(l=50, r=50, t=50, b=100)
+                margin=dict(l=50, r=50, t=50, b=100),
+                font=dict(color='#c8cdd5')
             )
 
             st.plotly_chart(fig_trend, use_container_width=True)
@@ -953,14 +1016,14 @@ def render_restructured_income_screen(session, settings):
                 <div style="
                     text-align: center;
                     padding: 2rem;
-                    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+                    background: rgba(224, 122, 95, 0.15);
                     border-radius: 16px;
-                    border: 2px solid #ef4444;
+                    border: 2px solid #e07a5f;
                 ">
-                    <div style="font-size: 2.5rem; font-weight: 800; color: #dc2626;">
+                    <div style="font-size: 2.5rem; font-weight: 800; color: #e07a5f;">
                         {format_currency(avg_monthly_tax)}
                     </div>
-                    <div style="color: #991b1b; font-size: 0.875rem; margin-top: 0.5rem; font-weight: 600;">
+                    <div style="color: #e07a5f; font-size: 0.875rem; margin-top: 0.5rem; font-weight: 600;">
                         AVG MONTHLY TAX
                     </div>
                 </div>
@@ -971,14 +1034,14 @@ def render_restructured_income_screen(session, settings):
                 <div style="
                     text-align: center;
                     padding: 2rem;
-                    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                    background: rgba(79, 143, 234, 0.15);
                     border-radius: 16px;
-                    border: 2px solid #f59e0b;
+                    border: 2px solid #4f8fea;
                 ">
-                    <div style="font-size: 2.5rem; font-weight: 800; color: #d97706;">
+                    <div style="font-size: 2.5rem; font-weight: 800; color: #4f8fea;">
                         {format_currency(total_all_tax)}
                     </div>
-                    <div style="color: #92400e; font-size: 0.875rem; margin-top: 0.5rem; font-weight: 600;">
+                    <div style="color: #4f8fea; font-size: 0.875rem; margin-top: 0.5rem; font-weight: 600;">
                         TOTAL TAX PAID
                     </div>
                 </div>
@@ -990,14 +1053,14 @@ def render_restructured_income_screen(session, settings):
                 <div style="
                     text-align: center;
                     padding: 2rem;
-                    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+                    background: rgba(59, 130, 246, 0.15);
                     border-radius: 16px;
                     border: 2px solid #3b82f6;
                 ">
-                    <div style="font-size: 2.5rem; font-weight: 800; color: #1e40af;">
+                    <div style="font-size: 2.5rem; font-weight: 800; color: #3b82f6;">
                         {format_currency(avg_payment)}
                     </div>
-                    <div style="color: #1e3a8a; font-size: 0.875rem; margin-top: 0.5rem; font-weight: 600;">
+                    <div style="color: #3b82f6; font-size: 0.875rem; margin-top: 0.5rem; font-weight: 600;">
                         AVG PAYMENT SIZE
                     </div>
                 </div>
@@ -1007,8 +1070,8 @@ def render_restructured_income_screen(session, settings):
             st.markdown("""
             <div class="empty-state">
                 <div class="empty-state-icon"></div>
-                <h3 style="color: #1f2937;">No Income Data Available</h3>
-                <p style="color: #64748b;">Add some income records to see analytics and insights</p>
+                <h3 style="color: #c8cdd5;">No Income Data Available</h3>
+                <p style="color: rgba(200, 205, 213, 0.45);">Add some income records to see analytics and insights</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1044,14 +1107,14 @@ def render_restructured_income_screen(session, settings):
                 # Display current record info
                 st.markdown(f"""
                 <div style="
-                    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+                    background: rgba(59, 130, 246, 0.15);
                     border-left: 6px solid #3b82f6;
                     padding: 1.5rem;
                     border-radius: 12px;
                     margin: 1.5rem 0;
                 ">
-                    <h4 style="margin: 0 0 1rem 0; color: #1e40af;">Selected Record</h4>
-                    <div style="color: #1e3a8a;">
+                    <h4 style="margin: 0 0 1rem 0; color: #3b82f6;">Selected Record</h4>
+                    <div style="color: rgba(200, 205, 213, 0.7);">
                         <strong>Source:</strong> {record.source}<br>
                         <strong>Date:</strong> {record.date.strftime('%d %B %Y')}<br>
                         <strong>Amount:</strong> {format_currency(record.amount_gross)}<br>
@@ -1103,13 +1166,13 @@ def render_restructured_income_screen(session, settings):
                             new_net = new_amount - new_tax
                             st.markdown(f"""
                             <div style="
-                                background: #d1fae5;
+                                background: rgba(54, 199, 160, 0.15);
                                 padding: 1rem;
                                 border-radius: 8px;
                                 margin-top: 1rem;
                             ">
-                                <strong style="color: #065f46;">New Net Amount:</strong><br>
-                                <span style="color: #047857; font-size: 1.5rem; font-weight: 700;">
+                                <strong style="color: #36c7a0;">New Net Amount:</strong><br>
+                                <span style="color: #36c7a0; font-size: 1.5rem; font-weight: 700;">
                                     {format_currency(new_net)}
                                 </span>
                             </div>
@@ -1129,55 +1192,21 @@ def render_restructured_income_screen(session, settings):
                                 record.description = new_desc if new_desc else None
                                 record.notes = new_notes if new_notes else None
                                 session.commit()
-                                st.success("Record updated successfully!")
-                                st.balloons()
+                                show_toast(f"Income record #{record.id} updated", "success")
                                 st.rerun()
 
                 elif action == "Delete Record":
                     st.markdown("#### Delete Record")
 
-                    st.warning(
-                        "This action cannot be undone! "
-                        "The income record will be permanently deleted from the database."
-                    )
-
-                    # Confirmation
-                    st.markdown(f"""
-                    <div style="
-                        background: #fee2e2;
-                        border: 2px solid #ef4444;
-                        padding: 1.5rem;
-                        border-radius: 12px;
-                        margin: 1rem 0;
-                    ">
-                        <h4 style="margin: 0 0 1rem 0; color: #991b1b;">You are about to delete:</h4>
-                        <div style="color: #7f1d1d;">
-                            <strong>Source:</strong> {record.source}<br>
-                            <strong>Date:</strong> {record.date.strftime('%d %B %Y')}<br>
-                            <strong>Amount:</strong> {format_currency(record.amount_gross)}<br>
-                            <strong>ID:</strong> {record.id}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    confirm_text = st.text_input(
-                        "Type DELETE to confirm",
-                        key="delete_confirm",
-                        help="Type the word DELETE in capital letters to enable deletion"
-                    )
-
-                    col1, col2, col3 = st.columns([1, 1, 1])
-                    with col2:
-                        if st.button(
-                            "Delete Record",
-                            type="secondary",
-                            use_container_width=True,
-                            disabled=(confirm_text != "DELETE")
-                        ):
-                            session.delete(record)
-                            session.commit()
-                            st.success("Record deleted successfully!")
-                            st.rerun()
+                    if confirm_delete(
+                        f"income_{record.id}",
+                        f"Income #{record.id}",
+                        f"{record.source} — {format_currency(record.amount_gross)} on {record.date.strftime('%d %B %Y')}"
+                    ):
+                        session.delete(record)
+                        session.commit()
+                        show_toast(f"Income record #{record.id} deleted", "delete")
+                        st.rerun()
             else:
                 st.error(f"Record with ID {record_id} not found. Please check the ID and try again.")
 

@@ -297,12 +297,12 @@ from components.ui.charts import (
 - Include interactive tooltips
 
 **Color Scheme:**
-- Primary: #667eea (Purple)
-- Secondary: #764ba2 (Dark Purple)
-- Success: #28a745 (Green)
-- Danger: #dc3545 (Red)
-- Info: #007bff (Blue)
-- Warning: #ffc107 (Yellow)
+- Primary: #4f8fea (Purple)
+- Secondary: #3a6db8 (Dark Purple)
+- Success: #36c7a0 (Green)
+- Danger: #e07a5f (Red)
+- Info: #4f8fea (Blue)
+- Warning: #e5b567 (Yellow)
 """)
 
 # Close session

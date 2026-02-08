@@ -559,7 +559,7 @@ def render_customization_demo():
     st.markdown("#### Your Personal Keyboard Layout:")
 
     st.markdown(
-        "<div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); "
+        "<div style='background: linear-gradient(135deg, #4f8fea 0%, #3a6db8 100%); "
         "color: white; padding: 20px; border-radius: 8px; text-align: center;'>"
         "<h3 style='color: white; margin: 0;'>You're now a keyboard ninja! 🥷</h3>"
         "<p style='margin: 10px 0 0 0;'>Press ? anytime to see your shortcuts</p>"
@@ -614,7 +614,7 @@ def render_interactive_cheatsheet():
             border-color: #4CAF50;
         }
         .key.special {
-            background: #FFC107;
+            background: #e5b567;
             border-color: #FFA000;
         }
         .key-label {

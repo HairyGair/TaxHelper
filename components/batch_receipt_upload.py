@@ -1066,19 +1066,19 @@ if __name__ == "__main__":
     }
     .success-card {
         background-color: #d4edda;
-        border-left: 4px solid #28a745;
+        border-left: 4px solid #36c7a0;
         padding: 1rem;
         margin: 0.5rem 0;
     }
     .warning-card {
         background-color: #fff3cd;
-        border-left: 4px solid #ffc107;
+        border-left: 4px solid #e5b567;
         padding: 1rem;
         margin: 0.5rem 0;
     }
     .error-card {
         background-color: #f8d7da;
-        border-left: 4px solid #dc3545;
+        border-left: 4px solid #e07a5f;
         padding: 1rem;
         margin: 0.5rem 0;
     }

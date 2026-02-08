@@ -374,14 +374,14 @@ def get_confidence_level(score: int) -> Dict:
     if score >= 70:
         return {
             'level': 'High',
-            'color': '#28a745',
+            'color': '#36c7a0',
             'emoji': '🟢',
             'description': "We're very confident this is correct"
         }
     elif score >= 40:
         return {
             'level': 'Medium',
-            'color': '#ffc107',
+            'color': '#e5b567',
             'emoji': '🟡',
             'description': "This looks likely based on patterns"
         }
@@ -395,7 +395,7 @@ def get_confidence_level(score: int) -> Dict:
     else:
         return {
             'level': 'None',
-            'color': '#dc3545',
+            'color': '#e07a5f',
             'emoji': '🔴',
             'description': "No matches found - please review carefully"
         }
@@ -458,7 +458,7 @@ def render_confidence_tooltip(confidence_score: int, breakdown: Dict, show_badge
     }
 
     .confidence-breakdown-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #3a6db8 100%);
         color: white;
         padding: 20px;
         border-radius: 12px;
@@ -721,7 +721,7 @@ def render_help_modal():
 
     .help-section h4 {
         margin-top: 0;
-        color: #FFD700;
+        color: #4f8fea;
     }
 
     .help-factor {
@@ -834,7 +834,7 @@ def render_help_modal():
                 <strong style="color: #90EE90;">🟢 High (70-100%):</strong> We're very confident this is correct
             </div>
             <div class="help-factor">
-                <strong style="color: #FFD700;">🟡 Medium (40-69%):</strong> This looks likely based on patterns
+                <strong style="color: #4f8fea;">🟡 Medium (40-69%):</strong> This looks likely based on patterns
             </div>
             <div class="help-factor">
                 <strong style="color: #FFA500;">🟠 Low (10-39%):</strong> This is just our best guess
@@ -893,7 +893,7 @@ def render_bulk_confidence_stats(transactions, session):
     low_count = sum(1 for s in scores if s < 40)
 
     st.markdown(f"""
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    <div style="background: linear-gradient(135deg, #4f8fea 0%, #3a6db8 100%);
                 color: white; padding: 20px; border-radius: 12px; margin: 10px 0;">
         <h4 style="margin-top: 0;">📊 Bulk Confidence Statistics</h4>
         <div style="display: flex; justify-content: space-around; margin: 15px 0;">
@@ -906,7 +906,7 @@ def render_bulk_confidence_stats(transactions, session):
                 <div style="font-size: 12px; opacity: 0.9;">High Confidence</div>
             </div>
             <div style="text-align: center;">
-                <div style="font-size: 28px; font-weight: bold; color: #FFD700;">🟡 {medium_count}</div>
+                <div style="font-size: 28px; font-weight: bold; color: #4f8fea;">🟡 {medium_count}</div>
                 <div style="font-size: 12px; opacity: 0.9;">Medium Confidence</div>
             </div>
             <div style="text-align: center;">

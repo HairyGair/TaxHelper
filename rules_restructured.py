@@ -9,6 +9,7 @@ from datetime import datetime
 from sqlalchemy import func
 from models import Rule, Transaction, MATCH_MODES, INCOME_TYPES, EXPENSE_CATEGORIES
 from utils import format_currency
+from components.ui.interactions import show_toast, confirm_delete
 
 def render_restructured_rules_screen(session, settings):
     """
@@ -222,9 +223,9 @@ def render_restructured_rules_screen(session, settings):
                             added_count += 1
                     
                     session.commit()
-                    st.success(f"✅ Added {added_count} new rules!")
+                    show_toast(f"Added {added_count} new rules", "success")
                     if added_count < len(selected_rules):
-                        st.warning(f"⚠️ {len(selected_rules) - added_count} rules already existed")
+                        show_toast(f"{len(selected_rules) - added_count} rules already existed", "warning")
                     st.rerun()
     
     # ============================================================================
@@ -287,16 +288,16 @@ def render_restructured_rules_screen(session, settings):
                     
                     for rule in rule_list:
                         with st.container():
-                            col1, col2, col3, col4, col5 = st.columns([3, 2, 1, 1, 1])
-                            
+                            col1, col2, col3, col4, col5, col6 = st.columns([3, 2, 1, 0.5, 0.5, 1])
+
                             with col1:
                                 # Rule text with match mode
                                 status_icon = "✅" if rule.enabled else "⏸️"
                                 st.markdown(f"""
-                                **{status_icon} {rule.text_to_match}**  
+                                **{status_icon} {rule.text_to_match}**
                                 *{rule.match_mode}* • Priority: {rule.priority} • ID: #{rule.id}
                                 """)
-                            
+
                             with col2:
                                 # Category/Type
                                 category = rule.income_type or rule.expense_category or "N/A"
@@ -307,7 +308,7 @@ def render_restructured_rules_screen(session, settings):
                                         st.error(f"→ {category}")
                                     else:
                                         st.info(f"→ Personal/Ignore")
-                            
+
                             with col3:
                                 # Toggle enabled
                                 new_status = st.checkbox(
@@ -319,24 +320,92 @@ def render_restructured_rules_screen(session, settings):
                                     rule.enabled = new_status
                                     session.commit()
                                     st.rerun()
-                            
+
                             with col4:
                                 # Edit button
                                 if st.button("✏️", key=f"edit_{rule.id}", help="Edit rule"):
                                     st.session_state['edit_rule_id'] = rule.id
                                     st.session_state['show_edit_form'] = True
-                            
+
                             with col5:
                                 # Delete button
                                 if st.button("🗑️", key=f"delete_{rule.id}", help="Delete rule"):
                                     session.delete(rule)
                                     session.commit()
-                                    st.success(f"Deleted rule: {rule.text_to_match}")
+                                    show_toast(f"Rule deleted: {rule.text_to_match}", "delete")
                                     st.rerun()
-                            
+
+                            with col6:
+                                # Test button
+                                if st.button("Test", key=f"test_{rule.id}", help="Test against existing transactions"):
+                                    st.session_state['test_rule_id'] = rule.id
+
                             if rule.notes:
                                 st.caption(f"📝 {rule.notes}")
-                            
+
+                            # Show test results for selected rule
+                            if st.session_state.get('test_rule_id') == rule.id:
+                                # Find matching transactions
+                                test_rule = rule
+                                import re as _re
+                                matching_txns = []
+                                all_txns = session.query(Transaction).all()
+                                for txn in all_txns:
+                                    desc = (txn.description or "").upper()
+                                    rule_text = test_rule.text_to_match.upper()
+                                    is_match = False
+                                    if test_rule.match_mode == "Contains" and rule_text in desc:
+                                        is_match = True
+                                    elif test_rule.match_mode == "Equals" and desc == rule_text:
+                                        is_match = True
+                                    elif test_rule.match_mode == "Starts with" and desc.startswith(rule_text):
+                                        is_match = True
+                                    elif test_rule.match_mode == "Ends with" and desc.endswith(rule_text):
+                                        is_match = True
+                                    elif test_rule.match_mode == "Regex":
+                                        try:
+                                            if _re.search(test_rule.text_to_match, txn.description or "", _re.IGNORECASE):
+                                                is_match = True
+                                        except Exception:
+                                            pass
+                                    if is_match:
+                                        matching_txns.append(txn)
+
+                                match_count = len(matching_txns)
+                                cat = test_rule.income_type or test_rule.expense_category or "Ignore"
+
+                                if match_count > 0:
+                                    st.markdown(f"""
+                                    <div class="mr-chart-filter">
+                                        <span class="filter-label">Rule "{test_rule.text_to_match}" matches</span>
+                                        <span class="filter-value">{match_count} transactions</span>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+
+                                    # Show first 10 matches
+                                    with st.expander(f"View {min(match_count, 10)} of {match_count} matches", expanded=True):
+                                        for txn in matching_txns[:10]:
+                                            st.markdown(f"- **{txn.description}** — {txn.date.strftime('%d %b %Y')} — £{float(txn.amount or 0):,.2f}")
+
+                                    # Apply button
+                                    if st.button(f"Apply rule to all {match_count} matches", key=f"apply_rule_{rule.id}", type="primary"):
+                                        applied = 0
+                                        for txn in matching_txns:
+                                            txn.guessed_type = test_rule.map_to
+                                            txn.guessed_category = cat
+                                            txn.confidence_score = 0.95
+                                            applied += 1
+                                        session.commit()
+                                        show_toast(f"Rule applied to {applied} transactions", "success")
+                                        st.session_state.pop('test_rule_id', None)
+                                        st.rerun()
+                                else:
+                                    st.info(f"No existing transactions match \"{test_rule.text_to_match}\"")
+
+                                if st.button("Close test results", key=f"close_test_{rule.id}"):
+                                    st.session_state.pop('test_rule_id', None)
+                                    st.rerun()
+
                             st.markdown("---")
             
             # Edit form (if triggered)
@@ -383,7 +452,7 @@ def render_restructured_rules_screen(session, settings):
                                 rule.expense_category = new_category if new_map_to == "Expense" else None
                                 rule.notes = new_notes
                                 session.commit()
-                                st.success("✅ Rule updated!")
+                                show_toast(f"Rule updated: {new_text}", "success")
                                 st.session_state['show_edit_form'] = False
                                 st.rerun()
                         
@@ -483,8 +552,7 @@ def render_restructured_rules_screen(session, settings):
                         )
                         session.add(new_rule)
                         session.commit()
-                        st.success(f"✅ Rule created: {text_to_match} → {map_to}: {category if category else 'Ignore'}")
-                        st.balloons()
+                        show_toast(f"Rule created: {text_to_match} → {map_to}: {category if category else 'Ignore'}", "success")
                 else:
                     st.error("❌ Please provide text to match")
     
@@ -613,25 +681,27 @@ def render_restructured_rules_screen(session, settings):
                 y=list(reversed(auto_rates)),
                 mode='lines+markers',
                 name='Auto-categorization Rate',
-                line=dict(color='#10b981', width=3),
+                line=dict(color='#36c7a0', width=3),
                 marker=dict(size=10),
                 fill='tonexty',
-                fillcolor='rgba(16, 185, 129, 0.1)'
+                fillcolor='rgba(54, 199, 160, 0.1)'
             ))
             
             fig.update_layout(
                 height=300,
                 showlegend=False,
-                plot_bgcolor='white',
-                paper_bgcolor='white',
+                plot_bgcolor='#12161f',
+                paper_bgcolor='#12161f',
                 yaxis=dict(
-                    title='Auto-categorization %',
+                    title=dict(text='Auto-categorization %', font=dict(color='#c8cdd5')),
+                    tickfont=dict(color='#c8cdd5'),
                     range=[0, 100],
                     showgrid=True,
-                    gridcolor='#f0f0f0'
+                    gridcolor='rgba(79, 143, 234, 0.08)'
                 ),
                 xaxis=dict(
                     title='',
+                    tickfont=dict(color='#c8cdd5'),
                     showgrid=False
                 )
             )

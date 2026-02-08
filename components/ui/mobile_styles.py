@@ -54,7 +54,7 @@ def inject_mobile_responsive_css():
         }
 
         /* Hero sections - reduce padding */
-        div[style*="linear-gradient(135deg, #0f2027"] {
+        div[style*="linear-gradient(135deg, #0b0e14"] {
             padding: 1.5rem 1rem !important;
             border-radius: 12px !important;
             margin-bottom: 1rem !important;
@@ -217,7 +217,7 @@ def inject_mobile_responsive_css():
         }
 
         /* Hero sections */
-        div[style*="linear-gradient(135deg, #0f2027"] {
+        div[style*="linear-gradient(135deg, #0b0e14"] {
             padding: 1rem 0.75rem !important;
         }
 
@@ -394,7 +394,7 @@ def inject_mobile_responsive_css():
             padding-bottom: 0.5rem;
         }
 
-        div[style*="linear-gradient(135deg, #0f2027"] {
+        div[style*="linear-gradient(135deg, #0b0e14"] {
             padding: 1rem !important;
         }
 
@@ -596,8 +596,8 @@ def render_mobile_nav_hint():
     """
     st.markdown("""
     <div style="
-        background: rgba(102, 126, 234, 0.1);
-        border-left: 4px solid #667eea;
+        background: rgba(79, 143, 234, 0.1);
+        border-left: 4px solid #4f8fea;
         padding: 0.75rem;
         border-radius: 8px;
         margin-bottom: 1rem;
@@ -660,7 +660,7 @@ def render_install_pwa_prompt():
     """
     st.markdown("""
     <div style="
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #3a6db8 100%);
         padding: 1rem;
         border-radius: 12px;
         color: white;

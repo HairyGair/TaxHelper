@@ -13,24 +13,97 @@ import plotly.express as px
 from models import Transaction, Income, Expense, Mileage, Donation, INCOME_TYPES, EXPENSE_CATEGORIES
 from utils import format_currency, get_tax_year_dates
 
+def _calc_tax(total_taxable, employment_tax, dividends, donations, se_profit):
+    """Calculate income tax + NI given total taxable income. Returns dict of results."""
+    PERSONAL_ALLOWANCE = 12570
+    grossed_donations = donations * 1.25 if donations > 0 else 0
+    BASIC_RATE_THRESHOLD = 37700
+    HIGHER_RATE_THRESHOLD = 125140
+    adjusted_basic = BASIC_RATE_THRESHOLD + grossed_donations
+
+    taxable_after_pa = max(0, total_taxable - PERSONAL_ALLOWANCE)
+    non_div = max(0, taxable_after_pa - dividends)
+
+    # Tax on non-dividend
+    tax_nd = 0
+    if non_div > 0:
+        if non_div <= adjusted_basic:
+            tax_nd = non_div * 0.20
+        elif non_div <= HIGHER_RATE_THRESHOLD:
+            tax_nd = adjusted_basic * 0.20 + (non_div - adjusted_basic) * 0.40
+        else:
+            tax_nd = adjusted_basic * 0.20 + (HIGHER_RATE_THRESHOLD - adjusted_basic) * 0.40 + (non_div - HIGHER_RATE_THRESHOLD) * 0.45
+
+    # Dividends
+    tax_div = 0
+    if dividends > 500:
+        td = dividends - 500
+        ib = non_div
+        if ib < adjusted_basic:
+            br = min(td, adjusted_basic - ib)
+            tax_div += br * 0.0875
+            td -= br
+            ib += br
+        if td > 0 and ib < HIGHER_RATE_THRESHOLD:
+            hr = min(td, HIGHER_RATE_THRESHOLD - ib)
+            tax_div += hr * 0.3375
+            td -= hr
+        if td > 0:
+            tax_div += td * 0.3935
+
+    total_it = tax_nd + tax_div
+    it_to_pay = total_it - employment_tax
+
+    # NI
+    ni2 = 3.45 * 52 if se_profit > 6725 else 0
+    ni4 = 0
+    if se_profit > 12570:
+        ni4 = (min(se_profit, 50270) - 12570) * 0.09
+        if se_profit > 50270:
+            ni4 += (se_profit - 50270) * 0.02
+
+    total_liability = it_to_pay + ni2 + ni4
+
+    # Determine effective band
+    if taxable_after_pa == 0:
+        band = "Personal Allowance"
+    elif non_div <= adjusted_basic:
+        band = "Basic Rate (20%)"
+    elif non_div <= HIGHER_RATE_THRESHOLD:
+        band = "Higher Rate (40%)"
+    else:
+        band = "Additional Rate (45%)"
+
+    return {
+        "income_tax": total_it,
+        "tax_to_pay": it_to_pay,
+        "ni": ni2 + ni4,
+        "total_liability": total_liability,
+        "taxable_income": taxable_after_pa,
+        "band": band,
+        "personal_allowance": PERSONAL_ALLOWANCE,
+    }
+
+
 def render_restructured_summary_screen(session, settings):
     """
     Render a completely restructured HMRC Summary page with modern interface
     """
 
-    # Custom CSS for the summary page - Modern blue/indigo gradient and animations
+    # Custom CSS for the summary page - Obsidian dark theme
     st.markdown("""
     <style>
     /* Summary Page Specific Styling */
     .summary-header {
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-        color: white;
+        background: linear-gradient(135deg, rgba(79, 143, 234, 0.15) 0%, rgba(79, 143, 234, 0.05) 100%);
+        color: #c8cdd5;
         padding: 3rem 2rem;
         border-radius: 24px;
         margin-bottom: 2rem;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 20px 60px rgba(59, 130, 246, 0.3);
+        box-shadow: 0 20px 60px rgba(79, 143, 234, 0.1);
+        border: 1px solid rgba(79, 143, 234, 0.12);
     }
 
     .summary-header::before {
@@ -61,31 +134,31 @@ def render_restructured_summary_screen(session, settings):
     }
 
     .status-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 16px;
         padding: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        border: 1px solid #f0f0f0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        border: 1px solid rgba(79, 143, 234, 0.12);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         height: 100%;
     }
 
     .status-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 30px rgba(59, 130, 246, 0.15);
+        box-shadow: 0 8px 30px rgba(79, 143, 234, 0.2);
     }
 
     .metric-value {
         font-size: 2.5rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #7aafff 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin: 0.5rem 0;
     }
 
     .metric-label {
-        color: #64748b;
+        color: rgba(200, 205, 213, 0.38);
         font-size: 0.875rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -94,8 +167,8 @@ def render_restructured_summary_screen(session, settings):
     }
 
     .warning-card {
-        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-        border-left: 6px solid #ef4444;
+        background: rgba(224, 122, 95, 0.1);
+        border-left: 6px solid #e07a5f;
         border-radius: 16px;
         padding: 1.5rem;
         margin: 1rem 0;
@@ -104,39 +177,39 @@ def render_restructured_summary_screen(session, settings):
 
     .warning-card:hover {
         transform: translateX(5px);
-        box-shadow: 0 4px 20px rgba(239, 68, 68, 0.2);
+        box-shadow: 0 4px 20px rgba(224, 122, 95, 0.2);
     }
 
     .success-card {
-        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-        border-left: 6px solid #10b981;
+        background: rgba(54, 199, 160, 0.1);
+        border-left: 6px solid #36c7a0;
         border-radius: 16px;
         padding: 1.5rem;
         margin: 1rem 0;
     }
 
     .info-card {
-        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-        border-left: 6px solid #3b82f6;
+        background: rgba(79, 143, 234, 0.1);
+        border-left: 6px solid #4f8fea;
         border-radius: 16px;
         padding: 1.5rem;
         margin: 1rem 0;
     }
 
     .tax-calc-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 20px;
         padding: 2rem;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
         margin: 1.5rem 0;
-        border: 1px solid #f0f0f0;
+        border: 1px solid rgba(79, 143, 234, 0.12);
     }
 
     .breakdown-row {
         display: flex;
         justify-content: space-between;
         padding: 0.75rem 0;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid rgba(79, 143, 234, 0.12);
     }
 
     .breakdown-row:last-child {
@@ -144,35 +217,35 @@ def render_restructured_summary_screen(session, settings):
         font-weight: 700;
         font-size: 1.2rem;
         padding-top: 1rem;
-        border-top: 2px solid #3b82f6;
+        border-top: 2px solid #4f8fea;
     }
 
     .breakdown-label {
-        color: #1f2937;
+        color: #c8cdd5;
         font-weight: 500;
     }
 
     .breakdown-value {
-        color: #3b82f6;
+        color: #4f8fea;
         font-weight: 700;
     }
 
     .hmrc-box {
-        background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
-        border: 2px solid #c7d2fe;
+        background: rgba(79, 143, 234, 0.1);
+        border: 2px solid rgba(79, 143, 234, 0.12);
         border-radius: 12px;
         padding: 1rem;
         margin: 0.5rem 0;
     }
 
     .hmrc-box-number {
-        color: #4338ca;
+        color: #4f8fea;
         font-weight: 700;
         font-size: 0.875rem;
     }
 
     .hmrc-box-value {
-        color: #1f2937;
+        color: #c8cdd5;
         font-weight: 600;
         font-size: 1.1rem;
     }
@@ -180,9 +253,9 @@ def render_restructured_summary_screen(session, settings):
     .empty-state {
         text-align: center;
         padding: 4rem 2rem;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: #181d28;
         border-radius: 20px;
-        border: 2px dashed #cbd5e1;
+        border: 2px dashed rgba(79, 143, 234, 0.12);
     }
 
     .empty-state-icon {
@@ -192,10 +265,10 @@ def render_restructured_summary_screen(session, settings):
     }
 
     .analytics-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 20px;
         padding: 2rem;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
         margin: 1rem 0;
     }
 
@@ -210,25 +283,28 @@ def render_restructured_summary_screen(session, settings):
     }
 
     .readiness-ready {
-        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-        color: #065f46;
+        background: rgba(54, 199, 160, 0.2);
+        color: #36c7a0;
+        border: 1px solid #36c7a0;
     }
 
     .readiness-warning {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        color: #92400e;
+        background: rgba(79, 143, 234, 0.2);
+        color: #4f8fea;
+        border: 1px solid #4f8fea;
     }
 
     .readiness-error {
-        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-        color: #991b1b;
+        background: rgba(224, 122, 95, 0.2);
+        color: #e07a5f;
+        border: 1px solid #e07a5f;
     }
 
     .progress-circle {
         width: 150px;
         height: 150px;
         border-radius: 50%;
-        background: conic-gradient(#3b82f6 0%, #3b82f6 var(--progress), #e5e7eb var(--progress), #e5e7eb 100%);
+        background: conic-gradient(#4f8fea 0%, #4f8fea var(--progress), rgba(200, 205, 213, 0.06) var(--progress), rgba(200, 205, 213, 0.06) 100%);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -240,13 +316,79 @@ def render_restructured_summary_screen(session, settings):
         width: 110px;
         height: 110px;
         border-radius: 50%;
-        background: white;
+        background: #12161f;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 2rem;
         font-weight: 800;
-        color: #3b82f6;
+        color: #4f8fea;
+    }
+
+    /* What-If Calculator */
+    .whatif-wrapper {
+        background: linear-gradient(135deg, rgba(79, 143, 234, 0.06) 0%, rgba(18, 22, 31, 0.95) 100%);
+        border: 1px solid rgba(79, 143, 234, 0.15);
+        border-radius: 20px;
+        padding: 1.75rem;
+        margin: 2rem 0;
+    }
+    .whatif-diff {
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+        padding: 0.8rem 0;
+    }
+    .whatif-col {
+        flex: 1;
+        text-align: center;
+    }
+    .whatif-col .label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: rgba(200, 205, 213, 0.4);
+        margin-bottom: 0.25rem;
+    }
+    .whatif-col .value {
+        font-size: 1.35rem;
+        font-weight: 700;
+    }
+    .whatif-arrow {
+        font-size: 1.3rem;
+        color: rgba(200, 205, 213, 0.3);
+    }
+    .whatif-delta {
+        text-align: center;
+        padding: 0.4rem 0.8rem;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+    .whatif-delta.saving {
+        background: rgba(54, 199, 160, 0.12);
+        color: #36c7a0;
+    }
+    .whatif-delta.increase {
+        background: rgba(224, 122, 95, 0.12);
+        color: #e07a5f;
+    }
+    .whatif-delta.neutral {
+        background: rgba(200, 205, 213, 0.06);
+        color: rgba(200, 205, 213, 0.5);
+    }
+    .whatif-band-bar {
+        height: 8px;
+        border-radius: 4px;
+        background: rgba(200, 205, 213, 0.06);
+        position: relative;
+        margin: 0.5rem 0;
+        overflow: hidden;
+    }
+    .whatif-band-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.4s ease;
     }
 
     </style>
@@ -258,15 +400,15 @@ def render_restructured_summary_screen(session, settings):
 
     # Header Section with animation
     st.markdown(f"""
-    <div class="summary-header">
+    <div class="ob-hero summary-header">
         <div style="position: relative; z-index: 1;">
-            <h1 style="margin: 0; font-size: 3rem; font-weight: 800;">
+            <h1 style="margin: 0; font-size: 3rem; font-weight: 800; color: #c8cdd5;">
                 HMRC Tax Summary
             </h1>
-            <p style="margin: 1rem 0 0 0; font-size: 1.2rem; opacity: 0.95;">
+            <p style="margin: 1rem 0 0 0; font-size: 1.2rem; opacity: 0.95; color: #c8cdd5;">
                 Self Assessment for Tax Year {tax_year}
             </p>
-            <p style="margin: 0.5rem 0 0 0; font-size: 1rem; opacity: 0.85;">
+            <p style="margin: 0.5rem 0 0 0; font-size: 1rem; opacity: 0.85; color: rgba(200, 205, 213, 0.65);">
                 {start_date.strftime('%d %B %Y')} to {end_date.strftime('%d %B %Y')}
             </p>
         </div>
@@ -454,9 +596,9 @@ def render_restructured_summary_screen(session, settings):
                     <div style="display: flex; align-items: start; gap: 1rem;">
                         <div style="font-size: 2rem;">{icon}</div>
                         <div style="flex: 1;">
-                            <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">{warning['title']}</h4>
-                            <p style="margin: 0 0 0.5rem 0; color: #64748b;">{warning['message']}</p>
-                            <p style="margin: 0; color: #3b82f6; font-weight: 600; font-size: 0.875rem;">
+                            <h4 style="margin: 0 0 0.5rem 0; color: #c8cdd5;">{warning['title']}</h4>
+                            <p style="margin: 0 0 0.5rem 0; color: rgba(200, 205, 213, 0.65);">{warning['message']}</p>
+                            <p style="margin: 0; color: #4f8fea; font-weight: 600; font-size: 0.875rem;">
                                 → {warning['action']}
                             </p>
                         </div>
@@ -469,8 +611,8 @@ def render_restructured_summary_screen(session, settings):
                 <div style="display: flex; align-items: start; gap: 1rem;">
                     <div style="font-size: 2rem;">✅</div>
                     <div style="flex: 1;">
-                        <h4 style="margin: 0 0 0.5rem 0; color: #065f46;">All Pre-Submission Checks Passed!</h4>
-                        <p style="margin: 0; color: #047857;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #36c7a0;">All Pre-Submission Checks Passed!</h4>
+                        <p style="margin: 0; color: rgba(200, 205, 213, 0.75);">
                             Your data looks good and ready for HMRC submission.
                         </p>
                     </div>
@@ -520,7 +662,7 @@ def render_restructured_summary_screen(session, settings):
         with col2:
             st.markdown("""
             <div style="padding: 1rem;">
-                <h4 style="color: #1f2937; margin-bottom: 1rem;">Checklist</h4>
+                <h4 style="color: #c8cdd5; margin-bottom: 1rem;">Checklist</h4>
             """, unsafe_allow_html=True)
 
             # Checklist items
@@ -535,7 +677,7 @@ def render_restructured_summary_screen(session, settings):
 
             for item, is_complete in checklist:
                 icon = "✅" if is_complete else "⏳"
-                color = "#10b981" if is_complete else "#f59e0b"
+                color = "#36c7a0" if is_complete else "#4f8fea"
                 st.markdown(f"""
                 <div style="padding: 0.5rem 0; display: flex; align-items: center; gap: 0.75rem;">
                     <span style="font-size: 1.25rem;">{icon}</span>
@@ -612,7 +754,7 @@ def render_restructured_summary_screen(session, settings):
             <div class="status-card">
                 <div class="metric-label">Total Gross Income</div>
                 <div class="metric-value">{format_currency(total_income)}</div>
-                <div style="color: #10b981; font-size: 0.875rem; margin-top: 0.5rem;">
+                <div style="color: #36c7a0; font-size: 0.875rem; margin-top: 0.5rem;">
                     All sources combined
                 </div>
             </div>
@@ -624,11 +766,11 @@ def render_restructured_summary_screen(session, settings):
             <div class="status-card">
                 <div class="metric-label">Tax Already Paid</div>
                 <div class="metric-value" style="
-                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                    background: linear-gradient(135deg, #e07a5f 0%, #e07a5f 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                 ">{format_currency(total_tax_deducted)}</div>
-                <div style="color: #ef4444; font-size: 0.875rem; margin-top: 0.5rem;">
+                <div style="color: #e07a5f; font-size: 0.875rem; margin-top: 0.5rem;">
                     PAYE/Tax at source
                 </div>
             </div>
@@ -640,11 +782,11 @@ def render_restructured_summary_screen(session, settings):
             <div class="status-card">
                 <div class="metric-label">Net Income Received</div>
                 <div class="metric-value" style="
-                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    background: linear-gradient(135deg, #36c7a0 0%, #36c7a0 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                 ">{format_currency(net_income)}</div>
-                <div style="color: #10b981; font-size: 0.875rem; margin-top: 0.5rem;">
+                <div style="color: #36c7a0; font-size: 0.875rem; margin-top: 0.5rem;">
                     After tax deductions
                 </div>
             </div>
@@ -660,11 +802,11 @@ def render_restructured_summary_screen(session, settings):
             <div class="status-card">
                 <div class="metric-label">Income Sources</div>
                 <div class="metric-value" style="
-                    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+                    background: linear-gradient(135deg, #4f8fea 0%, #7aafff 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                 ">{income_sources}</div>
-                <div style="color: #8b5cf6; font-size: 0.875rem; margin-top: 0.5rem;">
+                <div style="color: #4f8fea; font-size: 0.875rem; margin-top: 0.5rem;">
                     Unique payers/clients
                 </div>
             </div>
@@ -699,10 +841,10 @@ def render_restructured_summary_screen(session, settings):
                         values=list(income_data.values()),
                         hole=.4,
                         marker=dict(
-                            colors=px.colors.sequential.Blues,
-                            line=dict(color='white', width=2)
+                            colors=['#36c7a0', '#4f8fea', '#7aafff', '#e07a5f', '#c8cdd5', 'rgba(200, 205, 213, 0.6)'],
+                            line=dict(color='#12161f', width=2)
                         ),
-                        textfont=dict(size=14, color='white')
+                        textfont=dict(size=14, color='#c8cdd5')
                     )])
 
                     fig_pie.update_traces(
@@ -714,9 +856,11 @@ def render_restructured_summary_screen(session, settings):
                     fig_pie.update_layout(
                         height=400,
                         showlegend=True,
-                        plot_bgcolor='white',
-                        paper_bgcolor='white',
-                        margin=dict(l=20, r=20, t=40, b=20)
+                        plot_bgcolor='#12161f',
+                        paper_bgcolor='#12161f',
+                        margin=dict(l=20, r=20, t=40, b=20),
+                        font=dict(color='#c8cdd5'),
+                        legend=dict(font=dict(color='#c8cdd5'))
                     )
 
                     st.plotly_chart(fig_pie, use_container_width=True)
@@ -741,8 +885,8 @@ def render_restructured_summary_screen(session, settings):
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.markdown(f"""
                 <div class="info-card">
-                    <h4 style="margin: 0 0 0.5rem 0; color: #1e40af;">Tax Status</h4>
-                    <div style="color: #1e3a8a;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: #4f8fea;">Tax Status</h4>
+                    <div style="color: rgba(200, 205, 213, 0.75);">
                         <strong>Tax Deducted at Source:</strong> {format_currency(total_tax_deducted)}<br>
                         <strong>Untaxed Income:</strong> {format_currency(total_income - employment_total)}<br>
                         <strong>Effective Rate Paid:</strong> {(total_tax_deducted / total_income * 100) if total_income > 0 else 0:.1f}%
@@ -781,30 +925,30 @@ def render_restructured_summary_screen(session, settings):
                                 <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
                                     <span style="font-size: 2rem;">{icon}</span>
                                     <div>
-                                        <h3 style="margin: 0; color: #1f2937;">{income_type}</h3>
-                                        <p style="margin: 0; color: #64748b; font-size: 0.875rem;">{description}</p>
+                                        <h3 style="margin: 0; color: #c8cdd5;">{income_type}</h3>
+                                        <p style="margin: 0; color: rgba(200, 205, 213, 0.38); font-size: 0.875rem;">{description}</p>
                                     </div>
                                 </div>
                             </div>
                             <div style="text-align: right;">
-                                <div style="font-size: 2rem; font-weight: 800; color: #3b82f6;">
+                                <div style="font-size: 2rem; font-weight: 800; color: #4f8fea;">
                                     {format_currency(gross)}
                                 </div>
-                                <div style="color: #64748b; font-size: 0.875rem;">
+                                <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem;">
                                     {percentage:.1f}% of total income
                                 </div>
                             </div>
                         </div>
-                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f0f0f0;">
+                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(79, 143, 234, 0.12);">
                             <div style="display: flex; justify-content: space-between; gap: 2rem;">
                                 <div>
-                                    <span style="color: #64748b;">Gross:</span>
-                                    <strong style="color: #1f2937;">{format_currency(gross)}</strong>
+                                    <span style="color: rgba(200, 205, 213, 0.38);">Gross:</span>
+                                    <strong style="color: #c8cdd5;">{format_currency(gross)}</strong>
                                 </div>
-                                {f'<div><span style="color: #64748b;">Tax Paid:</span> <strong style="color: #ef4444;">-{format_currency(tax)}</strong></div>' if tax > 0 else ''}
+                                {f'<div><span style="color: rgba(200, 205, 213, 0.38);">Tax Paid:</span> <strong style="color: #e07a5f;">-{format_currency(tax)}</strong></div>' if tax > 0 else ''}
                                 <div>
-                                    <span style="color: #64748b;">Net:</span>
-                                    <strong style="color: #10b981;">{format_currency(net)}</strong>
+                                    <span style="color: rgba(200, 205, 213, 0.38);">Net:</span>
+                                    <strong style="color: #36c7a0;">{format_currency(net)}</strong>
                                 </div>
                             </div>
                         </div>
@@ -816,8 +960,8 @@ def render_restructured_summary_screen(session, settings):
             st.markdown("""
             <div class="empty-state">
                 <div class="empty-state-icon">💰</div>
-                <h2 style="color: #1f2937; margin-bottom: 0.5rem;">No Income Recorded</h2>
-                <p style="color: #64748b; font-size: 1.1rem;">
+                <h2 style="color: #c8cdd5; margin-bottom: 0.5rem;">No Income Recorded</h2>
+                <p style="color: rgba(200, 205, 213, 0.38); font-size: 1.1rem;">
                     Add income entries to see your tax calculation
                 </p>
             </div>
@@ -853,11 +997,11 @@ def render_restructured_summary_screen(session, settings):
             <div class="status-card">
                 <div class="metric-label">Total Expenses</div>
                 <div class="metric-value" style="
-                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                    background: linear-gradient(135deg, #e07a5f 0%, #e07a5f 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                 ">{format_currency(expenses_total)}</div>
-                <div style="color: #ef4444; font-size: 0.875rem; margin-top: 0.5rem;">
+                <div style="color: #e07a5f; font-size: 0.875rem; margin-top: 0.5rem;">
                     Business expenses
                 </div>
             </div>
@@ -868,11 +1012,11 @@ def render_restructured_summary_screen(session, settings):
             <div class="status-card">
                 <div class="metric-label">Mileage Allowance</div>
                 <div class="metric-value" style="
-                    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+                    background: linear-gradient(135deg, #4f8fea 0%, #7aafff 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                 ">{format_currency(mileage_total)}</div>
-                <div style="color: #f97316; font-size: 0.875rem; margin-top: 0.5rem;">
+                <div style="color: #4f8fea; font-size: 0.875rem; margin-top: 0.5rem;">
                     45p/mile deduction
                 </div>
             </div>
@@ -883,11 +1027,11 @@ def render_restructured_summary_screen(session, settings):
             <div class="status-card">
                 <div class="metric-label">Total Allowable</div>
                 <div class="metric-value" style="
-                    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+                    background: linear-gradient(135deg, #4f8fea 0%, #7aafff 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                 ">{format_currency(total_allowable)}</div>
-                <div style="color: #8b5cf6; font-size: 0.875rem; margin-top: 0.5rem;">
+                <div style="color: #4f8fea; font-size: 0.875rem; margin-top: 0.5rem;">
                     Tax deductible total
                 </div>
             </div>
@@ -898,11 +1042,11 @@ def render_restructured_summary_screen(session, settings):
             <div class="status-card">
                 <div class="metric-label">Gift Aid Donations</div>
                 <div class="metric-value" style="
-                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    background: linear-gradient(135deg, #36c7a0 0%, #36c7a0 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                 ">{format_currency(donations_total)}</div>
-                <div style="color: #10b981; font-size: 0.875rem; margin-top: 0.5rem;">
+                <div style="color: #36c7a0; font-size: 0.875rem; margin-top: 0.5rem;">
                     Extends basic rate band
                 </div>
             </div>
@@ -932,10 +1076,10 @@ def render_restructured_summary_screen(session, settings):
                         values=[float(amt) for _, amt in expense_breakdown],
                         hole=.4,
                         marker=dict(
-                            colors=px.colors.sequential.Reds,
-                            line=dict(color='white', width=2)
+                            colors=['#e07a5f', '#4f8fea', '#7aafff', 'rgba(224, 122, 95, 0.6)', 'rgba(200, 205, 213, 0.4)', 'rgba(200, 205, 213, 0.2)'],
+                            line=dict(color='#12161f', width=2)
                         ),
-                        textfont=dict(size=12, color='white')
+                        textfont=dict(size=12, color='#c8cdd5')
                     )])
 
                     fig_expenses.update_traces(
@@ -947,9 +1091,11 @@ def render_restructured_summary_screen(session, settings):
                     fig_expenses.update_layout(
                         height=400,
                         showlegend=True,
-                        plot_bgcolor='white',
-                        paper_bgcolor='white',
-                        margin=dict(l=20, r=20, t=40, b=20)
+                        plot_bgcolor='#12161f',
+                        paper_bgcolor='#12161f',
+                        margin=dict(l=20, r=20, t=40, b=20),
+                        font=dict(color='#c8cdd5'),
+                        legend=dict(font=dict(color='#c8cdd5'))
                     )
 
                     st.plotly_chart(fig_expenses, use_container_width=True)
@@ -982,8 +1128,8 @@ def render_restructured_summary_screen(session, settings):
 
                     st.markdown(f"""
                     <div class="info-card">
-                        <h4 style="margin: 0 0 0.5rem 0; color: #1e40af;">Mileage Summary</h4>
-                        <div style="color: #1e3a8a;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #4f8fea;">Mileage Summary</h4>
+                        <div style="color: rgba(200, 205, 213, 0.75);">
                             <strong>Total Miles:</strong> {total_miles:,.0f} miles<br>
                             <strong>Rate:</strong> 45p/mile (first 10,000)<br>
                             <strong>Allowance:</strong> {format_currency(mileage_total)}
@@ -1012,13 +1158,13 @@ def render_restructured_summary_screen(session, settings):
                     <div class="tax-calc-card">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
-                                <h4 style="margin: 0; color: #1f2937;">{category}</h4>
-                                <p style="margin: 0.25rem 0 0 0; color: #64748b; font-size: 0.875rem;">
+                                <h4 style="margin: 0; color: #c8cdd5;">{category}</h4>
+                                <p style="margin: 0.25rem 0 0 0; color: rgba(200, 205, 213, 0.38); font-size: 0.875rem;">
                                     {count} transaction(s) • {percentage:.1f}% of total expenses
                                 </p>
                             </div>
                             <div style="text-align: right;">
-                                <div style="font-size: 1.75rem; font-weight: 800; color: #ef4444;">
+                                <div style="font-size: 1.75rem; font-weight: 800; color: #e07a5f;">
                                     {format_currency(amount)}
                                 </div>
                             </div>
@@ -1035,7 +1181,7 @@ def render_restructured_summary_screen(session, settings):
 
                 st.markdown(f"""
                 <div class="tax-calc-card">
-                    <h4 style="margin: 0 0 1rem 0; color: #1f2937;">Charitable Donations (Gift Aid)</h4>
+                    <h4 style="margin: 0 0 1rem 0; color: #c8cdd5;">Charitable Donations (Gift Aid)</h4>
                     <div class="breakdown-row">
                         <span class="breakdown-label">Amount Paid</span>
                         <span class="breakdown-value">{format_currency(donations_total)}</span>
@@ -1044,8 +1190,8 @@ def render_restructured_summary_screen(session, settings):
                         <span class="breakdown-label">Grossed-Up Value (for tax relief)</span>
                         <span class="breakdown-value">{format_currency(grossed_up)}</span>
                     </div>
-                    <div style="margin-top: 1rem; padding: 1rem; background: #f0f4ff; border-radius: 12px;">
-                        <p style="margin: 0; color: #1e40af; font-size: 0.875rem;">
+                    <div style="margin-top: 1rem; padding: 1rem; background: rgba(79, 143, 234, 0.1); border-radius: 12px;">
+                        <p style="margin: 0; color: #4f8fea; font-size: 0.875rem;">
                             💡 <strong>Tax Relief:</strong> Gift Aid donations extend your basic rate band by {format_currency(grossed_up)},
                             which can reduce higher-rate tax liability.
                         </p>
@@ -1058,8 +1204,8 @@ def render_restructured_summary_screen(session, settings):
             st.markdown("""
             <div class="empty-state">
                 <div class="empty-state-icon">💳</div>
-                <h2 style="color: #1f2937; margin-bottom: 0.5rem;">No Expenses Recorded</h2>
-                <p style="color: #64748b; font-size: 1.1rem;">
+                <h2 style="color: #c8cdd5; margin-bottom: 0.5rem;">No Expenses Recorded</h2>
+                <p style="color: rgba(200, 205, 213, 0.38); font-size: 1.1rem;">
                     Add expense entries to reduce your tax liability
                 </p>
             </div>
@@ -1187,11 +1333,11 @@ def render_restructured_summary_screen(session, settings):
             <div class="status-card">
                 <div class="metric-label">Total Income Tax</div>
                 <div class="metric-value" style="
-                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                    background: linear-gradient(135deg, #e07a5f 0%, #e07a5f 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                 ">{format_currency(total_income_tax)}</div>
-                <div style="color: #ef4444; font-size: 0.875rem; margin-top: 0.5rem;">
+                <div style="color: #e07a5f; font-size: 0.875rem; margin-top: 0.5rem;">
                     Before credits
                 </div>
             </div>
@@ -1202,18 +1348,18 @@ def render_restructured_summary_screen(session, settings):
             <div class="status-card">
                 <div class="metric-label">National Insurance</div>
                 <div class="metric-value" style="
-                    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+                    background: linear-gradient(135deg, #4f8fea 0%, #7aafff 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                 ">{format_currency(total_ni)}</div>
-                <div style="color: #f97316; font-size: 0.875rem; margin-top: 0.5rem;">
+                <div style="color: #4f8fea; font-size: 0.875rem; margin-top: 0.5rem;">
                     Class 2 + Class 4
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
         with col3:
-            color = "#ef4444" if total_tax_liability > 0 else "#10b981"
+            color = "#e07a5f" if total_tax_liability > 0 else "#36c7a0"
             st.markdown(f"""
             <div class="status-card">
                 <div class="metric-label">Final Tax Liability</div>
@@ -1235,7 +1381,7 @@ def render_restructured_summary_screen(session, settings):
 
         st.markdown(f"""
         <div class="tax-calc-card">
-            <h4 style="margin: 0 0 1rem 0; color: #1f2937;">Step 1: Total Income</h4>
+            <h4 style="margin: 0 0 1rem 0; color: #c8cdd5;">Step 1: Total Income</h4>
             <div class="breakdown-row">
                 <span class="breakdown-label">Employment Income</span>
                 <span class="breakdown-value">{format_currency(employment_total)}</span>
@@ -1265,7 +1411,7 @@ def render_restructured_summary_screen(session, settings):
 
         st.markdown(f"""
         <div class="tax-calc-card">
-            <h4 style="margin: 0 0 1rem 0; color: #1f2937;">Step 2: Allowances</h4>
+            <h4 style="margin: 0 0 1rem 0; color: #c8cdd5;">Step 2: Allowances</h4>
             <div class="breakdown-row">
                 <span class="breakdown-label">Personal Allowance (2024/25)</span>
                 <span class="breakdown-value">-{format_currency(PERSONAL_ALLOWANCE)}</span>
@@ -1283,9 +1429,9 @@ def render_restructured_summary_screen(session, settings):
 
         st.markdown(f"""
         <div class="tax-calc-card">
-            <h4 style="margin: 0 0 1rem 0; color: #1f2937;">Step 3: Tax Calculation</h4>
-            <div style="margin-bottom: 1rem; padding: 1rem; background: #f8fafc; border-radius: 8px;">
-                <p style="margin: 0; color: #64748b; font-size: 0.875rem;">
+            <h4 style="margin: 0 0 1rem 0; color: #c8cdd5;">Step 3: Tax Calculation</h4>
+            <div style="margin-bottom: 1rem; padding: 1rem; background: rgba(79, 143, 234, 0.05); border-radius: 8px;">
+                <p style="margin: 0; color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">
                     <strong>Tax Bands (2024/25):</strong><br>
                     Basic Rate (20%): £0 - £{adjusted_basic_threshold:,.0f}<br>
                     Higher Rate (40%): £{adjusted_basic_threshold:,.0f} - £{HIGHER_RATE_THRESHOLD:,.0f}<br>
@@ -1318,7 +1464,7 @@ def render_restructured_summary_screen(session, settings):
         if total_ni > 0:
             st.markdown(f"""
             <div class="tax-calc-card">
-                <h4 style="margin: 0 0 1rem 0; color: #1f2937;">Step 4: National Insurance</h4>
+                <h4 style="margin: 0 0 1rem 0; color: #c8cdd5;">Step 4: National Insurance</h4>
                 {f'''<div class="breakdown-row">
                     <span class="breakdown-label">Class 2 NI (£3.45/week for profits > £6,725)</span>
                     <span class="breakdown-value">{format_currency(ni_class_2)}</span>
@@ -1339,8 +1485,8 @@ def render_restructured_summary_screen(session, settings):
             """, unsafe_allow_html=True)
 
         st.markdown(f"""
-        <div class="tax-calc-card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 3px solid #f59e0b;">
-            <h4 style="margin: 0 0 1rem 0; color: #92400e;">Final Tax Liability for {tax_year}</h4>
+        <div class="tax-calc-card" style="background: rgba(79, 143, 234, 0.15); border: 3px solid #4f8fea;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">Final Tax Liability for {tax_year}</h4>
             <div class="breakdown-row">
                 <span class="breakdown-label">Income Tax to Pay</span>
                 <span class="breakdown-value">{format_currency(tax_still_to_pay)}</span>
@@ -1350,8 +1496,8 @@ def render_restructured_summary_screen(session, settings):
                 <span class="breakdown-value">{format_currency(total_ni)}</span>
             </div>
             <div class="breakdown-row" style="font-size: 1.5rem; margin-top: 1rem;">
-                <span class="breakdown-label" style="color: #92400e;">TOTAL TO PAY</span>
-                <span class="breakdown-value" style="color: #92400e; font-size: 2rem;">{format_currency(total_tax_liability)}</span>
+                <span class="breakdown-label" style="color: #4f8fea;">TOTAL TO PAY</span>
+                <span class="breakdown-value" style="color: #4f8fea; font-size: 2rem;">{format_currency(total_tax_liability)}</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -1372,8 +1518,8 @@ def render_restructured_summary_screen(session, settings):
 
         st.markdown(f"""
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #1e40af;">Payment Deadlines</h4>
-            <div style="color: #1e3a8a;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">Payment Deadlines</h4>
+            <div style="color: rgba(200, 205, 213, 0.75);">
                 <strong>Self Assessment Deadline:</strong> {deadline_date}<br>
                 <strong>Balance Payment:</strong> {payment_on_account_1}<br>
         """, unsafe_allow_html=True)
@@ -1383,7 +1529,7 @@ def render_restructured_summary_screen(session, settings):
             poa_1_text = f"<strong>Payment on Account (1st):</strong> {payment_on_account_1} (50% of this year's tax)<br>"
             poa_2_text = f"<strong>Payment on Account (2nd):</strong> {payment_on_account_2} (remaining 50%)<br>"
             st.markdown(f"""
-            <div style="color: #1e3a8a;">
+            <div style="color: rgba(200, 205, 213, 0.75);">
                 {poa_1_text}
                 {poa_2_text}
             </div>
@@ -1432,6 +1578,150 @@ def render_restructured_summary_screen(session, settings):
 - Class 4 NI: **{format_currency(ni_class_4)}**
 - **Total tax liability: {format_currency(total_tax_liability)}**
             """)
+
+        # ======================================================================
+        # WHAT-IF TAX CALCULATOR
+        # ======================================================================
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("### What-If Scenarios")
+
+        with st.expander("Explore what-if tax scenarios", expanded=False):
+            st.markdown('<div class="whatif-wrapper">', unsafe_allow_html=True)
+            st.markdown(
+                '<p style="color: rgba(200,205,213,0.6); font-size: 0.88rem; margin-bottom: 1rem;">'
+                'Drag the sliders to see how changes to your income or expenses would affect your tax bill.</p>',
+                unsafe_allow_html=True,
+            )
+
+            wi_col1, wi_col2, wi_col3 = st.columns(3)
+            with wi_col1:
+                extra_income = st.slider(
+                    "Additional Income",
+                    min_value=0,
+                    max_value=50000,
+                    value=0,
+                    step=500,
+                    format="£%d",
+                    key="whatif_income",
+                )
+            with wi_col2:
+                extra_expenses = st.slider(
+                    "Additional Expenses",
+                    min_value=0,
+                    max_value=20000,
+                    value=0,
+                    step=250,
+                    format="£%d",
+                    key="whatif_expenses",
+                )
+            with wi_col3:
+                extra_mileage_miles = st.slider(
+                    "Additional Miles",
+                    min_value=0,
+                    max_value=10000,
+                    value=0,
+                    step=100,
+                    format="%d mi",
+                    key="whatif_mileage",
+                )
+
+            mileage_rate = float(settings.get('mileage_rate_standard', '0.45'))
+            extra_mileage_val = extra_mileage_miles * mileage_rate
+
+            # Current values
+            cur_se = self_employment_total
+            cur_allowable = total_allowable
+            cur_profit = cur_se - cur_allowable
+            cur_total_taxable = employment_total + cur_profit + interest_total + dividends_total + property_total
+
+            # Projected values
+            proj_se = cur_se + extra_income
+            proj_allowable = cur_allowable + extra_expenses + extra_mileage_val
+            proj_profit = proj_se - proj_allowable
+            proj_total_taxable = employment_total + proj_profit + interest_total + dividends_total + property_total
+
+            cur_result = _calc_tax(cur_total_taxable, employment_tax, dividends_total, donations_total, cur_profit)
+            proj_result = _calc_tax(proj_total_taxable, employment_tax, dividends_total, donations_total, proj_profit)
+
+            # Diff helper
+            def _diff_html(label, cur_val, proj_val, fmt="currency"):
+                if fmt == "currency":
+                    cv = format_currency(cur_val)
+                    pv = format_currency(proj_val)
+                else:
+                    cv = f"{cur_val:,.0f}"
+                    pv = f"{proj_val:,.0f}"
+                delta = proj_val - cur_val
+                if abs(delta) < 0.50:
+                    dcls = "neutral"
+                    dtxt = "No change"
+                elif delta < 0:
+                    dcls = "saving"
+                    dtxt = f"-{format_currency(abs(delta))}"
+                else:
+                    dcls = "increase"
+                    dtxt = f"+{format_currency(delta)}"
+                return f"""
+                <div style="margin-bottom: 0.75rem;">
+                    <div style="color: rgba(200,205,213,0.5); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.3rem;">{label}</div>
+                    <div class="whatif-diff">
+                        <div class="whatif-col"><div class="label">Current</div><div class="value" style="color: #c8cdd5;">{cv}</div></div>
+                        <div class="whatif-arrow">&#8594;</div>
+                        <div class="whatif-col"><div class="label">Projected</div><div class="value" style="color: #7aafff;">{pv}</div></div>
+                        <div class="whatif-delta {dcls}">{dtxt}</div>
+                    </div>
+                </div>
+                """
+
+            st.markdown(
+                _diff_html("Net Profit", cur_profit, proj_profit)
+                + _diff_html("Income Tax", cur_result["income_tax"], proj_result["income_tax"])
+                + _diff_html("National Insurance", cur_result["ni"], proj_result["ni"])
+                + _diff_html("Total Tax Liability", cur_result["total_liability"], proj_result["total_liability"]),
+                unsafe_allow_html=True,
+            )
+
+            # Tax band visualization
+            band_max = 125140
+            cur_pct = min(cur_result["taxable_income"] / band_max * 100, 100)
+            proj_pct = min(proj_result["taxable_income"] / band_max * 100, 100)
+
+            st.markdown(f"""
+            <div style="margin-top: 1rem;">
+                <div style="color: rgba(200,205,213,0.5); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">
+                    Tax Band Position
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: rgba(200,205,213,0.3); margin-bottom: 0.2rem;">
+                    <span>£0</span>
+                    <span>PA £12,570</span>
+                    <span>Basic 20%</span>
+                    <span>Higher 40%</span>
+                    <span>£125k+</span>
+                </div>
+                <div style="position: relative;">
+                    <div class="whatif-band-bar">
+                        <div class="whatif-band-fill" style="width: {cur_pct:.1f}%; background: rgba(200,205,213,0.2);"></div>
+                    </div>
+                    <div class="whatif-band-bar" style="margin-top: 0.3rem;">
+                        <div class="whatif-band-fill" style="width: {proj_pct:.1f}%; background: linear-gradient(90deg, #36c7a0, #4f8fea, #e5b567, #e07a5f);"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.68rem; margin-top: 0.2rem;">
+                        <span style="color: rgba(200,205,213,0.35);">Current: {cur_result['band']}</span>
+                        <span style="color: #7aafff;">Projected: {proj_result['band']}</span>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # Reset button
+            if extra_income > 0 or extra_expenses > 0 or extra_mileage_miles > 0:
+                if st.button("Reset to Actual", key="whatif_reset"):
+                    st.session_state.whatif_income = 0
+                    st.session_state.whatif_expenses = 0
+                    st.session_state.whatif_mileage = 0
+                    st.rerun()
 
         # Export options
         st.markdown("<br>", unsafe_allow_html=True)

@@ -9,6 +9,186 @@ from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, date
 
 
+# ---------------------------------------------------------------------------
+# Form Validation  (Phase 5 UX)
+# ---------------------------------------------------------------------------
+
+def validate_field(value, *, required=False, min_value=None, max_value=None,
+                   min_length=None, max_length=None, date_range=None,
+                   label="Field"):
+    """
+    Validate a single form field and return (is_valid, error_message).
+
+    Args:
+        value:      The field value to validate.
+        required:   If True, value must be non-empty / non-zero.
+        min_value:  Minimum numeric value (inclusive).
+        max_value:  Maximum numeric value (inclusive).
+        min_length: Minimum string length.
+        max_length: Maximum string length.
+        date_range: Tuple of (start_date, end_date) for date validation.
+        label:      Human-readable field name for error messages.
+
+    Returns:
+        (True, None) if valid, or (False, error_string) if invalid.
+    """
+    # Required check
+    if required:
+        if value is None:
+            return False, f"{label} is required"
+        if isinstance(value, str) and not value.strip():
+            return False, f"{label} is required"
+        if isinstance(value, (int, float)) and value == 0:
+            return False, f"{label} must be greater than zero"
+
+    # Skip further checks if value is empty/None and not required
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return True, None
+
+    # Numeric bounds
+    if min_value is not None and isinstance(value, (int, float)):
+        if value < min_value:
+            return False, f"{label} must be at least {min_value}"
+    if max_value is not None and isinstance(value, (int, float)):
+        if value > max_value:
+            return False, f"{label} must be at most {max_value:,}"
+
+    # String length
+    if isinstance(value, str):
+        if min_length is not None and len(value.strip()) < min_length:
+            return False, f"{label} must be at least {min_length} characters"
+        if max_length is not None and len(value.strip()) > max_length:
+            return False, f"{label} must be at most {max_length} characters"
+
+    # Date range
+    if date_range is not None and isinstance(value, (date, datetime)):
+        start, end = date_range
+        if hasattr(value, 'date'):
+            value = value.date()
+        if hasattr(start, 'date'):
+            start = start.date()
+        if hasattr(end, 'date'):
+            end = end.date()
+        if value < start or value > end:
+            return False, f"{label} must be between {start} and {end}"
+
+    return True, None
+
+
+def show_validation(is_valid, error_msg=None, success_msg=None):
+    """
+    Render inline validation feedback below a field.
+
+    Args:
+        is_valid:    Boolean result from validate_field.
+        error_msg:   Error message to show if invalid.
+        success_msg: Optional success message (if None, shows nothing on valid).
+    """
+    if not is_valid and error_msg:
+        st.markdown(f'<div class="mr-field-error">{error_msg}</div>', unsafe_allow_html=True)
+    elif is_valid and success_msg:
+        st.markdown(f'<div class="mr-field-ok">{success_msg}</div>', unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------
+# Toast Notifications & Delete Confirmations  (Phase 1 UX)
+# ---------------------------------------------------------------------------
+
+# Icon map for toast types — Meridian palette
+_TOAST_ICONS = {
+    "success": "\u2705",        # ✅
+    "error":   "\u274C",        # ❌
+    "info":    "\U0001F4AC",    # 💬
+    "warning": "\U0001F6A8",    # 🚨
+    "delete":  "\U0001F5D1",    # 🗑
+}
+
+
+def show_toast(message: str, type: str = "success") -> None:
+    """
+    Show a Meridian-styled toast notification.
+
+    Args:
+        message: The text to display.
+        type: One of "success", "error", "info", "warning", "delete".
+    """
+    icon = _TOAST_ICONS.get(type, _TOAST_ICONS["info"])
+    st.toast(f"{icon}  {message}")
+
+
+def confirm_delete(
+    key: str,
+    item_name: str,
+    item_details: Optional[str] = None,
+) -> bool:
+    """
+    Two-step delete confirmation using session_state.
+
+    Call this **before** performing the delete.  It renders a confirmation
+    area and returns ``True`` only when the user has confirmed.
+
+    Usage::
+
+        if confirm_delete("del_income_42", "Income #42", "£500 from Acme"):
+            session.delete(record)
+            session.commit()
+            show_toast("Record deleted", "delete")
+            st.rerun()
+
+    Args:
+        key: Unique key for this confirmation (used in session_state).
+        item_name: Short label shown in the confirmation prompt.
+        item_details: Optional extra detail string.
+
+    Returns:
+        True if the user confirmed deletion, False otherwise.
+    """
+    confirm_key = f"_confirm_delete_{key}"
+
+    # Step 1: user has not yet started confirmation
+    if not st.session_state.get(confirm_key):
+        if st.button(f"Delete {item_name}", key=f"btn_del_{key}", type="secondary"):
+            st.session_state[confirm_key] = True
+            st.rerun()
+        return False
+
+    # Step 2: confirmation is active — show warning + confirm/cancel
+    st.markdown(f"""
+    <div style="
+        background: rgba(224,122,95,0.10);
+        border: 1px solid rgba(224,122,95,0.35);
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        margin: 0.5rem 0 1rem;
+    ">
+        <div style="color:#e07a5f; font-weight:600; margin-bottom:0.35rem;">
+            Confirm deletion of {item_name}?
+        </div>
+        {f'<div style="color:rgba(200,205,213,0.65); font-size:0.88rem;">{item_details}</div>' if item_details else ''}
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_yes, col_no = st.columns(2)
+    with col_yes:
+        confirmed = st.button(
+            "Yes, delete",
+            key=f"btn_confirm_{key}",
+            type="primary",
+            use_container_width=True,
+        )
+    with col_no:
+        if st.button("Cancel", key=f"btn_cancel_{key}", use_container_width=True):
+            st.session_state[confirm_key] = False
+            st.rerun()
+
+    if confirmed:
+        # Reset so the dialog doesn't persist across reruns
+        st.session_state[confirm_key] = False
+        return True
+
+    return False
+
+
 def render_bulk_action_selector(
     items: List[Dict[str, Any]],
     item_id_key: str = "id",
@@ -70,7 +250,7 @@ def render_bulk_action_selector(
             background: #f8f9fa;
             padding: 15px;
             border-radius: 8px;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #4f8fea;
             margin-bottom: 20px;
         ">
         </div>
@@ -104,7 +284,7 @@ def render_bulk_action_selector(
             if selected_count > 0:
                 st.markdown(f"""
                 <div style="
-                    background: #667eea;
+                    background: #4f8fea;
                     color: white;
                     padding: 8px 12px;
                     border-radius: 6px;
@@ -131,7 +311,7 @@ def render_bulk_action_selector(
                     background: #e7f3ff;
                     padding: 10px;
                     border-radius: 6px;
-                    border-left: 3px solid #667eea;
+                    border-left: 3px solid #4f8fea;
                     margin: 5px 0;
                 ">
                 </div>
@@ -252,7 +432,7 @@ def render_advanced_filter_panel(
     with st.expander("Advanced Filters", expanded=False):
         st.markdown("""
         <div style="
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4f8fea 0%, #3a6db8 100%);
             padding: 2px;
             border-radius: 8px;
             margin-bottom: 15px;
@@ -671,7 +851,7 @@ def render_quick_edit_modal(
         with st.expander("Edit Transaction", expanded=True):
             st.markdown("""
             <div style="
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #4f8fea 0%, #3a6db8 100%);
                 padding: 15px;
                 border-radius: 8px;
                 color: white;
@@ -813,7 +993,7 @@ def render_smart_suggestions(
     with st.container():
         st.markdown("""
         <div style="
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            background: linear-gradient(135deg, #36c7a0 0%, #36c7a0 100%);
             padding: 2px;
             border-radius: 8px;
             margin: 15px 0;
@@ -831,7 +1011,7 @@ def render_smart_suggestions(
         st.markdown("### Smart Suggestion")
 
         # Confidence indicator
-        confidence_color = "#28a745" if avg_confidence >= 0.8 else "#ffc107" if avg_confidence >= 0.6 else "#dc3545"
+        confidence_color = "#36c7a0" if avg_confidence >= 0.8 else "#e5b567" if avg_confidence >= 0.6 else "#e07a5f"
         confidence_text = "High" if avg_confidence >= 0.8 else "Medium" if avg_confidence >= 0.6 else "Low"
 
         col1, col2 = st.columns([3, 1])

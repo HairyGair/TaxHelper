@@ -259,7 +259,7 @@ def main():
                     st.markdown(f"**£{row['amount']:.2f}**")
 
                 with col3:
-                    category_color = "#28a745" if row['confidence'] >= 0.8 else "#ffc107"
+                    category_color = "#36c7a0" if row['confidence'] >= 0.8 else "#e5b567"
                     st.markdown(f"""
                     <div style="
                         background: {category_color}20;

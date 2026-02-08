@@ -36,48 +36,48 @@ warnings.filterwarnings('ignore')
 # ============================================================================
 
 METALLIC_COLORS = {
-    'electric_blue': '#00d4ff',
-    'neon_green': '#00ffa3',
-    'cyber_purple': '#c77dff',
-    'hot_pink': '#ff006e',
-    'electric_orange': '#ff9500',
-    'chrome_silver': '#e0e0e0',
-    'dark_bg': '#0f2027',
-    'gradient_start': '#203a43',
-    'gradient_end': '#2c5364',
-    'dark_slate': '#1a1a2e',
-    'steel_gray': '#16213e',
+    'electric_blue': '#4f8fea',
+    'neon_green': '#36c7a0',
+    'cyber_purple': '#7aafff',
+    'hot_pink': '#e07a5f',
+    'electric_orange': '#e5b567',
+    'chrome_silver': '#c8cdd5',
+    'dark_bg': '#0b0e14',
+    'gradient_start': '#12161f',
+    'gradient_end': '#181d28',
+    'dark_slate': '#0b0e14',
+    'steel_gray': '#12161f',
 }
 
 # Gradient color scales for heatmaps and continuous data
 COLOR_SCALES = {
     'expense_heat': [
-        [0.0, '#0f2027'],
-        [0.2, '#203a43'],
-        [0.4, '#2c5364'],
-        [0.6, '#ff9500'],
-        [0.8, '#ff006e'],
-        [1.0, '#c77dff']
+        [0.0, '#0b0e14'],
+        [0.2, '#12161f'],
+        [0.4, '#181d28'],
+        [0.6, '#e5b567'],
+        [0.8, '#e07a5f'],
+        [1.0, '#7aafff']
     ],
     'income_gradient': [
-        [0.0, '#0f2027'],
-        [0.5, '#00ffa3'],
-        [1.0, '#00d4ff']
+        [0.0, '#0b0e14'],
+        [0.5, '#36c7a0'],
+        [1.0, '#4f8fea']
     ],
     'tax_zones': [
-        [0.0, '#00ffa3'],     # Green - low tax
-        [0.33, '#00d4ff'],    # Blue - medium
-        [0.66, '#ff9500'],    # Orange - high
-        [1.0, '#ff006e']      # Pink - very high
+        [0.0, '#36c7a0'],     # Green - low tax
+        [0.33, '#4f8fea'],    # Blue - medium
+        [0.66, '#e5b567'],    # Orange - high
+        [1.0, '#e07a5f']      # Pink - very high
     ]
 }
 
 # Consistent theme for all charts
 LAYOUT_THEME = {
-    'plot_bgcolor': 'rgba(15, 32, 39, 0.8)',
-    'paper_bgcolor': 'rgba(15, 32, 39, 0.5)',
-    'font': {'color': '#e0e0e0', 'family': 'Inter, sans-serif', 'size': 12},
-    'title': {'font': {'size': 20, 'color': '#00d4ff', 'family': 'Inter, sans-serif'}},
+    'plot_bgcolor': 'rgba(11, 14, 20, 0.8)',
+    'paper_bgcolor': 'rgba(11, 14, 20, 0.5)',
+    'font': {'color': '#c8cdd5', 'family': 'Inter, sans-serif', 'size': 12},
+    'title': {'font': {'size': 20, 'color': '#4f8fea', 'family': 'Inter, sans-serif'}},
     'hovermode': 'closest',
     'margin': {'l': 60, 'r': 60, 't': 80, 'b': 60}
 }
@@ -115,11 +115,11 @@ def apply_theme(fig: go.Figure, title: str = "", height: int = 500) -> go.Figure
         title=title,
         height=height,
         hoverlabel=dict(
-            bgcolor='rgba(15, 32, 39, 0.95)',
+            bgcolor='rgba(11, 14, 20, 0.95)',
             font_size=13,
             font_family='Inter, sans-serif',
-            font_color='#e0e0e0',
-            bordercolor='#00d4ff'
+            font_color='#c8cdd5',
+            bordercolor='#4f8fea'
         )
     )
     return fig
@@ -469,7 +469,7 @@ def render_expense_treemap(session, start_date: datetime, end_date: datetime) ->
             textposition='middle center',
             textfont_size=12,
             marker=dict(
-                line=dict(color='#0f2027', width=2),
+                line=dict(color='#0b0e14', width=2),
                 cornerradius=5
             ),
             hovertemplate='<b>%{label}</b><br>' +
@@ -690,7 +690,7 @@ def render_spending_radar(session, start_date: datetime, end_date: datetime) -> 
             r=df['current'].tolist() + [df['current'].iloc[0]],  # Close the loop
             theta=df['category'].tolist() + [df['category'].iloc[0]],
             fill='toself',
-            fillcolor=f'rgba(0, 212, 255, 0.2)',
+            fillcolor=f'rgba(79, 143, 234, 0.2)',
             line=dict(color=METALLIC_COLORS['electric_blue'], width=3),
             name='Current Period',
             hovertemplate='<b>%{theta}</b><br>Amount: £%{r:,.2f}<extra></extra>'
@@ -701,7 +701,7 @@ def render_spending_radar(session, start_date: datetime, end_date: datetime) -> 
             r=df['previous'].tolist() + [df['previous'].iloc[0]],
             theta=df['category'].tolist() + [df['category'].iloc[0]],
             fill='toself',
-            fillcolor=f'rgba(0, 255, 163, 0.2)',
+            fillcolor=f'rgba(54, 199, 160, 0.2)',
             line=dict(color=METALLIC_COLORS['neon_green'], width=3),
             name='Previous Period',
             hovertemplate='<b>%{theta}</b><br>Amount: £%{r:,.2f}<extra></extra>'
@@ -716,7 +716,7 @@ def render_spending_radar(session, start_date: datetime, end_date: datetime) -> 
 
         fig.update_layout(
             polar=dict(
-                bgcolor='rgba(15, 32, 39, 0.5)',
+                bgcolor='rgba(11, 14, 20, 0.5)',
                 radialaxis=dict(
                     visible=True,
                     gridcolor='rgba(255, 255, 255, 0.2)',
@@ -857,7 +857,7 @@ def render_income_tax_timeline(session, start_date: datetime, end_date: datetime
                 line=dict(color=METALLIC_COLORS['neon_green'], width=3),
                 marker=dict(size=8, symbol='circle'),
                 fill='tozeroy',
-                fillcolor='rgba(0, 255, 163, 0.1)',
+                fillcolor='rgba(54, 199, 160, 0.1)',
                 hovertemplate='<b>Income</b><br>Month: %{x|%b %Y}<br>Amount: £%{y:,.2f}<extra></extra>'
             ),
             secondary_y=False
@@ -898,21 +898,19 @@ def render_income_tax_timeline(session, start_date: datetime, end_date: datetime
         )
 
         fig.update_yaxes(
-            title_text='Income (£)',
+            title=dict(text='Income (£)', font=dict(color=METALLIC_COLORS['neon_green'])),
             secondary_y=False,
             tickprefix='£',
             tickformat=',.0f',
-            gridcolor='rgba(255, 255, 255, 0.1)',
-            titlefont=dict(color=METALLIC_COLORS['neon_green'])
+            gridcolor='rgba(255, 255, 255, 0.1)'
         )
 
         fig.update_yaxes(
-            title_text='Tax Amount (£) / Rate (%)',
+            title=dict(text='Tax Amount (£) / Rate (%)', font=dict(color=METALLIC_COLORS['hot_pink'])),
             secondary_y=True,
             tickprefix='£',
             tickformat=',.0f',
-            gridcolor='rgba(255, 255, 255, 0.1)',
-            titlefont=dict(color=METALLIC_COLORS['hot_pink'])
+            gridcolor='rgba(255, 255, 255, 0.1)'
         )
 
         # Update layout
@@ -1041,7 +1039,7 @@ def render_expense_velocity(session, start_date: datetime, end_date: datetime,
                 line=dict(color=METALLIC_COLORS['electric_blue'], width=3),
                 marker=dict(size=8),
                 fill='tozeroy',
-                fillcolor='rgba(0, 212, 255, 0.1)',
+                fillcolor='rgba(79, 143, 234, 0.1)',
                 hovertemplate='<b>%{x|' + date_format + '}</b><br>Spent: £%{y:,.2f}<extra></extra>'
             ),
             row=1, col=1
@@ -1227,7 +1225,7 @@ def render_income_to_expense_sankey(session, start_date: datetime, end_date: dat
             sources.append(node_dict[f"Income: {income_type}"])
             targets.append(node_dict["Available Funds"])
             values.append(amount)
-            colors.append('rgba(0, 255, 163, 0.4)')  # Green for income
+            colors.append('rgba(54, 199, 160, 0.4)')  # Green for income
 
         # Available Funds to Expenses
         total_income = sum([row[1] for row in income_data])
@@ -1238,7 +1236,7 @@ def render_income_to_expense_sankey(session, start_date: datetime, end_date: dat
             targets.append(node_dict[f"Expense: {expense_cat}"])
             # Proportionally allocate from available funds
             values.append(amount)
-            colors.append('rgba(255, 0, 110, 0.4)')  # Pink for expenses
+            colors.append('rgba(224, 122, 95, 0.4)')  # Copper for expenses
 
         # Create Sankey diagram
         fig = go.Figure(data=[go.Sankey(
@@ -1401,7 +1399,7 @@ def render_tax_efficiency_sunburst(session, start_date: datetime, end_date: date
             branchvalues="total",
             marker=dict(
                 colors=colors,
-                line=dict(color='#0f2027', width=2)
+                line=dict(color='#0b0e14', width=2)
             ),
             hovertemplate='<b>%{label}</b><br>Amount: £%{value:,.2f}<br>Percentage: %{percentParent}<extra></extra>',
             textfont=dict(size=11, color='white')
@@ -1515,7 +1513,7 @@ def render_quarterly_dashboard(session, year: int) -> None:
                     color=df['income'],
                     colorscale=COLOR_SCALES['income_gradient'],
                     showscale=False,
-                    line=dict(color='#0f2027', width=2)
+                    line=dict(color='#0b0e14', width=2)
                 ),
                 text=[format_currency(x) for x in df['income']],
                 textposition='outside',
@@ -1532,7 +1530,7 @@ def render_quarterly_dashboard(session, year: int) -> None:
                 y=df['expenses'],
                 marker=dict(
                     color=METALLIC_COLORS['hot_pink'],
-                    line=dict(color='#0f2027', width=2)
+                    line=dict(color='#0b0e14', width=2)
                 ),
                 text=[format_currency(x) for x in df['expenses']],
                 textposition='outside',
@@ -1551,7 +1549,7 @@ def render_quarterly_dashboard(session, year: int) -> None:
                 y=df['profit'],
                 marker=dict(
                     color=colors_profit,
-                    line=dict(color='#0f2027', width=2)
+                    line=dict(color='#0b0e14', width=2)
                 ),
                 text=[format_currency(x) for x in df['profit']],
                 textposition='outside',
@@ -1568,7 +1566,7 @@ def render_quarterly_dashboard(session, year: int) -> None:
                 y=df['net'],
                 marker=dict(
                     color=METALLIC_COLORS['cyber_purple'],
-                    line=dict(color='#0f2027', width=2)
+                    line=dict(color='#0b0e14', width=2)
                 ),
                 text=[format_currency(x) for x in df['net']],
                 textposition='outside',

@@ -60,14 +60,14 @@ def main():
     /* Card styling */
     .success-card {
         background-color: #d4edda;
-        border-left: 4px solid #28a745;
+        border-left: 4px solid #36c7a0;
         padding: 1.5rem;
         margin: 1rem 0;
         border-radius: 4px;
     }
     .warning-card {
         background-color: #fff3cd;
-        border-left: 4px solid #ffc107;
+        border-left: 4px solid #e5b567;
         padding: 1.5rem;
         margin: 1rem 0;
         border-radius: 4px;
@@ -82,13 +82,13 @@ def main():
 
     /* Progress bar styling */
     .stProgress > div > div > div {
-        background-color: #28a745;
+        background-color: #36c7a0;
     }
 
     /* File uploader styling */
     .uploadedFile {
         border-radius: 8px;
-        border: 1px solid #e0e0e0;
+        border: 1px solid #c8cdd5;
     }
 
     /* Expander styling */

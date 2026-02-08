@@ -32,19 +32,30 @@ def render_restructured_reports_screen(session, settings):
     Features comprehensive report generation and advanced analytics
     """
 
-    # Custom CSS for the reports page - Modern cyan/teal gradient and animations
+    # Custom CSS for the reports page - Obsidian dark theme
     st.markdown("""
     <style>
-    /* Reports Page Specific Styling */
-    .reports-header {
-        background: linear-gradient(135deg, #00d4ff 0%, #00b4d8 50%, #0077b6 100%);
-        color: white;
+    /* Reports Page Specific Styling - Obsidian Theme */
+    .ob-hero {
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
+        color: #c8cdd5;
         padding: 3rem 2rem;
         border-radius: 24px;
         margin-bottom: 2rem;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 20px 60px rgba(0, 212, 255, 0.3);
+        box-shadow: 0 20px 60px rgba(79, 143, 234, 0.3);
+    }
+
+    .reports-header {
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
+        color: #c8cdd5;
+        padding: 3rem 2rem;
+        border-radius: 24px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(79, 143, 234, 0.3);
     }
 
     .reports-header::before {
@@ -75,31 +86,31 @@ def render_restructured_reports_screen(session, settings):
     }
 
     .status-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 16px;
         padding: 1.5rem;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        border: 1px solid #f0f0f0;
+        border: 1px solid rgba(79, 143, 234, 0.12);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         height: 100%;
     }
 
     .status-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 30px rgba(0, 212, 255, 0.15);
+        box-shadow: 0 8px 30px rgba(79, 143, 234, 0.15);
     }
 
     .metric-value {
         font-size: 2.5rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #00d4ff 0%, #0077b6 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #f4c430 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin: 0.5rem 0;
     }
 
     .metric-label {
-        color: #64748b;
+        color: rgba(200, 205, 213, 0.38);
         font-size: 0.875rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -108,7 +119,7 @@ def render_restructured_reports_screen(session, settings):
     }
 
     .report-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 20px;
         padding: 2rem;
         box-shadow: 0 10px 40px rgba(0,0,0,0.08);
@@ -116,12 +127,12 @@ def render_restructured_reports_screen(session, settings):
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
-        border: 1px solid #f0f0f0;
+        border: 1px solid rgba(79, 143, 234, 0.12);
     }
 
     .report-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 15px 50px rgba(0, 212, 255, 0.15);
+        box-shadow: 0 15px 50px rgba(79, 143, 234, 0.15);
     }
 
     .report-card::before {
@@ -131,43 +142,43 @@ def render_restructured_reports_screen(session, settings):
         left: 0;
         width: 6px;
         height: 100%;
-        background: linear-gradient(135deg, #00d4ff 0%, #22d3ee 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #f4c430 100%);
     }
 
     .analytics-section {
-        background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
         border-radius: 20px;
         padding: 2rem;
-        border: 2px solid #67e8f9;
+        border: 2px solid rgba(79, 143, 234, 0.12);
         margin: 2rem 0;
     }
 
     .info-banner {
-        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-        border-left: 6px solid #3b82f6;
+        background: #181d28;
+        border-left: 6px solid #4f8fea;
         padding: 1.5rem;
         border-radius: 12px;
         margin: 1rem 0;
     }
 
     .success-banner {
-        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-        border-left: 6px solid #10b981;
+        background: #181d28;
+        border-left: 6px solid #36c7a0;
         padding: 1.5rem;
         border-radius: 12px;
         margin: 1rem 0;
     }
 
     .warning-banner {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        border-left: 6px solid #f59e0b;
+        background: #181d28;
+        border-left: 6px solid #4f8fea;
         padding: 1.5rem;
         border-radius: 12px;
         margin: 1rem 0;
     }
 
     .chart-container {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 20px;
         padding: 2rem;
         box-shadow: 0 10px 40px rgba(0,0,0,0.08);
@@ -178,8 +189,8 @@ def render_restructured_reports_screen(session, settings):
         display: inline-block;
         padding: 0.5rem 1rem;
         border-radius: 20px;
-        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-        color: #4338ca;
+        background: rgba(79, 143, 234, 0.2);
+        color: #4f8fea;
         font-weight: 600;
         font-size: 0.875rem;
         margin: 0.25rem;
@@ -188,9 +199,9 @@ def render_restructured_reports_screen(session, settings):
     .empty-state {
         text-align: center;
         padding: 4rem 2rem;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
         border-radius: 20px;
-        border: 2px dashed #cbd5e1;
+        border: 2px dashed rgba(79, 143, 234, 0.12);
     }
 
     .empty-state-icon {
@@ -206,20 +217,14 @@ def render_restructured_reports_screen(session, settings):
     tax_year = settings.get('tax_year', '2024/25')
     start_date, end_date = get_tax_year_dates(tax_year)
 
-    # Header Section with animation
+    # Header Section with Obsidian theme
     st.markdown(f"""
-    <div class="reports-header">
-        <div style="position: relative; z-index: 1;">
-            <h1 style="margin: 0; font-size: 3rem; font-weight: 800;">
-                📊 Compliance & Audit Reports
-            </h1>
-            <p style="margin: 1rem 0 0 0; font-size: 1.2rem; opacity: 0.95;">
-                Generate HMRC-ready reports and view advanced analytics
-            </p>
-            <p style="margin: 0.5rem 0 0 0; font-size: 1rem; opacity: 0.85;">
-                Tax Year {tax_year}: {start_date.strftime('%d %B %Y')} to {end_date.strftime('%d %B %Y')}
-            </p>
-        </div>
+    <div class="ob-hero">
+        <h1>📊 Compliance & Audit Reports</h1>
+        <p>Generate HMRC-ready reports and view advanced analytics</p>
+        <p style="margin-top: 0.5rem; font-size: 1rem; opacity: 0.85;">
+            Tax Year {tax_year}: {start_date.strftime('%d %B %Y')} to {end_date.strftime('%d %B %Y')}
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -276,7 +281,7 @@ def render_restructured_reports_screen(session, settings):
         <div class="status-card">
             <div class="metric-label">Available Reports</div>
             <div class="metric-value">{available_reports}</div>
-            <div style="color: #00d4ff; font-size: 0.875rem; margin-top: 0.5rem;">
+            <div style="color: #4f8fea; font-size: 0.875rem; margin-top: 0.5rem;">
                 Ready to generate
             </div>
         </div>
@@ -287,7 +292,7 @@ def render_restructured_reports_screen(session, settings):
         <div class="status-card">
             <div class="metric-label">Last Generated</div>
             <div class="metric-value" style="font-size: 1.5rem;">{last_generated}</div>
-            <div style="color: #64748b; font-size: 0.875rem; margin-top: 0.5rem;">
+            <div style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem; margin-top: 0.5rem;">
                 Most recent export
             </div>
         </div>
@@ -298,11 +303,11 @@ def render_restructured_reports_screen(session, settings):
         <div class="status-card">
             <div class="metric-label">Total Records</div>
             <div class="metric-value" style="
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                background: linear-gradient(135deg, #36c7a0 0%, #36c7a0 100%);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
             ">{income_count + expense_count + mileage_count}</div>
-            <div style="color: #64748b; font-size: 0.875rem; margin-top: 0.5rem;">
+            <div style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem; margin-top: 0.5rem;">
                 In current tax year
             </div>
         </div>
@@ -314,11 +319,11 @@ def render_restructured_reports_screen(session, settings):
         <div class="status-card">
             <div class="metric-label">Net Position</div>
             <div class="metric-value" style="
-                background: linear-gradient(135deg, {'#10b981' if net_position >= 0 else '#ef4444'} 0%, {'#059669' if net_position >= 0 else '#dc2626'} 100%);
+                background: linear-gradient(135deg, {'#36c7a0' if net_position >= 0 else '#e07a5f'} 0%, {'#36c7a0' if net_position >= 0 else '#e07a5f'} 100%);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
             ">{format_currency(net_position)}</div>
-            <div style="color: {'#10b981' if net_position >= 0 else '#ef4444'}; font-size: 0.875rem; margin-top: 0.5rem;">
+            <div style="color: {'#36c7a0' if net_position >= 0 else '#e07a5f'}; font-size: 0.875rem; margin-top: 0.5rem;">
                 {'Profit' if net_position >= 0 else 'Loss'}
             </div>
         </div>
@@ -346,8 +351,8 @@ def render_restructured_reports_screen(session, settings):
 
         st.markdown("""
         <div class="info-banner">
-            <strong style="font-size: 1.1rem;">📋 Professional Tax Documentation</strong><br>
-            <div style="margin-top: 0.5rem; color: #1e40af;">
+            <strong style="font-size: 1.1rem; color: #c8cdd5;">📋 Professional Tax Documentation</strong><br>
+            <div style="margin-top: 0.5rem; color: rgba(200, 205, 213, 0.65);">
                 Generate comprehensive reports ready for HMRC submission, accountant review, or personal record-keeping.
                 All reports include detailed breakdowns and comply with UK tax reporting standards.
             </div>
@@ -359,11 +364,11 @@ def render_restructured_reports_screen(session, settings):
             st.markdown(f"""
             <div class="empty-state">
                 <div class="empty-state-icon">📊</div>
-                <h2 style="color: #1f2937; margin-bottom: 0.5rem;">No Data Available</h2>
-                <p style="color: #64748b; font-size: 1.1rem;">
+                <h2 style="color: #c8cdd5; margin-bottom: 0.5rem;">No Data Available</h2>
+                <p style="color: rgba(200, 205, 213, 0.65); font-size: 1.1rem;">
                     There are no income or expense records for tax year {tax_year}
                 </p>
-                <p style="color: #94a3b8; margin-top: 1rem;">
+                <p style="color: rgba(200, 205, 213, 0.38); margin-top: 1rem;">
                     Add transactions to generate reports
                 </p>
             </div>
@@ -377,15 +382,15 @@ def render_restructured_reports_screen(session, settings):
             with col1:
                 st.markdown(f"""
                 <div class="report-card">
-                    <h4 style="margin: 0 0 1rem 0; color: #00b4d8;">💰 Income Data</h4>
+                    <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">💰 Income Data</h4>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div>
-                            <div style="color: #64748b; font-size: 0.875rem;">Total Records</div>
-                            <div style="font-size: 1.75rem; font-weight: 700; color: #10b981;">{income_count}</div>
+                            <div style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">Total Records</div>
+                            <div style="font-size: 1.75rem; font-weight: 700; color: #36c7a0;">{income_count}</div>
                         </div>
                         <div>
-                            <div style="color: #64748b; font-size: 0.875rem;">Total Amount</div>
-                            <div style="font-size: 1.75rem; font-weight: 700; color: #10b981;">{format_currency(total_income)}</div>
+                            <div style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">Total Amount</div>
+                            <div style="font-size: 1.75rem; font-weight: 700; color: #36c7a0;">{format_currency(total_income)}</div>
                         </div>
                     </div>
                 </div>
@@ -394,15 +399,15 @@ def render_restructured_reports_screen(session, settings):
             with col2:
                 st.markdown(f"""
                 <div class="report-card">
-                    <h4 style="margin: 0 0 1rem 0; color: #00b4d8;">💳 Expense Data</h4>
+                    <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">💳 Expense Data</h4>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div>
-                            <div style="color: #64748b; font-size: 0.875rem;">Total Records</div>
-                            <div style="font-size: 1.75rem; font-weight: 700; color: #ef4444;">{expense_count}</div>
+                            <div style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">Total Records</div>
+                            <div style="font-size: 1.75rem; font-weight: 700; color: #e07a5f;">{expense_count}</div>
                         </div>
                         <div>
-                            <div style="color: #64748b; font-size: 0.875rem;">Total Amount</div>
-                            <div style="font-size: 1.75rem; font-weight: 700; color: #ef4444;">{format_currency(total_expenses)}</div>
+                            <div style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">Total Amount</div>
+                            <div style="font-size: 1.75rem; font-weight: 700; color: #e07a5f;">{format_currency(total_expenses)}</div>
                         </div>
                     </div>
                 </div>
@@ -423,10 +428,10 @@ def render_restructured_reports_screen(session, settings):
 
         st.markdown("""
         <div class="analytics-section">
-            <h4 style="margin: 0 0 1rem 0; color: #0369a1;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                 🔬 Interactive Data Visualizations
             </h4>
-            <p style="color: #0c4a6e; margin: 0;">
+            <p style="color: rgba(200, 205, 213, 0.65); margin: 0;">
                 Explore your financial data with advanced charts and analytics.
                 Gain insights into spending patterns, tax efficiency, and cash flow trends.
             </p>
@@ -437,8 +442,8 @@ def render_restructured_reports_screen(session, settings):
             st.markdown("""
             <div class="empty-state">
                 <div class="empty-state-icon">📈</div>
-                <h2 style="color: #1f2937; margin-bottom: 0.5rem;">No Analytics Available</h2>
-                <p style="color: #64748b; font-size: 1.1rem;">
+                <h2 style="color: #c8cdd5; margin-bottom: 0.5rem;">No Analytics Available</h2>
+                <p style="color: rgba(200, 205, 213, 0.65); font-size: 1.1rem;">
                     Add financial data to unlock advanced analytics
                 </p>
             </div>
@@ -610,8 +615,8 @@ def render_restructured_reports_screen(session, settings):
 
         st.markdown("""
         <div class="info-banner">
-            <strong style="font-size: 1.1rem;">🎨 Build Your Perfect Report</strong><br>
-            <div style="margin-top: 0.5rem; color: #1e40af;">
+            <strong style="font-size: 1.1rem; color: #c8cdd5;">🎨 Build Your Perfect Report</strong><br>
+            <div style="margin-top: 0.5rem; color: rgba(200, 205, 213, 0.65);">
                 Create custom reports tailored to your specific needs. Select date ranges,
                 categories, and data points to include in your personalized analysis.
             </div>
@@ -699,8 +704,8 @@ def render_restructured_reports_screen(session, settings):
 
                 st.markdown(f"""
                 <div class="success-banner">
-                    <strong>✅ Custom Report Configuration Saved</strong><br>
-                    <div style="margin-top: 0.75rem; color: #065f46;">
+                    <strong style="color: #c8cdd5;">✅ Custom Report Configuration Saved</strong><br>
+                    <div style="margin-top: 0.75rem; color: rgba(200, 205, 213, 0.65);">
                         <strong>Date Range:</strong> {custom_start} to {custom_end}<br>
                         <strong>Sections:</strong> {', '.join(selected_sections)}<br>
                         <strong>Format:</strong> {output_format}<br><br>
@@ -721,8 +726,8 @@ def render_restructured_reports_screen(session, settings):
 
         st.markdown(f"""
         <div class="report-card">
-            <h4 style="margin: 0 0 1rem 0; color: #00b4d8;">Your Custom Report Will Include:</h4>
-            <div style="color: #64748b;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">Your Custom Report Will Include:</h4>
+            <div style="color: rgba(200, 205, 213, 0.65);">
                 <strong>📦 Total Sections:</strong> {sections_count}<br>
                 <strong>📅 Date Range:</strong> {(custom_end - custom_start).days + 1} days<br>
                 <strong>📊 Estimated Pages:</strong> {sections_count * 2}-{sections_count * 3} pages<br>
@@ -740,8 +745,8 @@ def render_restructured_reports_screen(session, settings):
 
         st.markdown("""
         <div class="info-banner">
-            <strong style="font-size: 1.1rem;">📚 Report Archive</strong><br>
-            <div style="margin-top: 0.5rem; color: #1e40af;">
+            <strong style="font-size: 1.1rem; color: #c8cdd5;">📚 Report Archive</strong><br>
+            <div style="margin-top: 0.5rem; color: rgba(200, 205, 213, 0.65);">
                 View and re-download previously generated reports. Keep track of all your
                 tax documentation and compliance exports.
             </div>
@@ -754,11 +759,11 @@ def render_restructured_reports_screen(session, settings):
         st.markdown("""
         <div class="empty-state">
             <div class="empty-state-icon">📜</div>
-            <h2 style="color: #1f2937; margin-bottom: 0.5rem;">No Export History</h2>
-            <p style="color: #64748b; font-size: 1.1rem;">
+            <h2 style="color: #c8cdd5; margin-bottom: 0.5rem;">No Export History</h2>
+            <p style="color: rgba(200, 205, 213, 0.65); font-size: 1.1rem;">
                 You haven't generated any reports yet
             </p>
-            <p style="color: #94a3b8; margin-top: 1rem;">
+            <p style="color: rgba(200, 205, 213, 0.38); margin-top: 1rem;">
                 Reports you generate will appear here for easy re-download
             </p>
         </div>
@@ -772,14 +777,14 @@ def render_restructured_reports_screen(session, settings):
             <div class="report-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                     <div>
-                        <strong>Full Tax Summary 2024/25</strong><br>
-                        <span style="color: #64748b; font-size: 0.875rem;">Generated: 15 Jan 2025, 14:30</span>
+                        <strong style="color: #c8cdd5;">Full Tax Summary 2024/25</strong><br>
+                        <span style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">Generated: 15 Jan 2025, 14:30</span>
                     </div>
                     <div>
                         <span class="report-type-badge">PDF</span>
                     </div>
                 </div>
-                <div style="color: #64748b; font-size: 0.875rem;">
+                <div style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">
                     File size: 2.3 MB • 45 pages • Income, Expenses, Tax Calculation
                 </div>
             </div>
@@ -787,14 +792,14 @@ def render_restructured_reports_screen(session, settings):
             <div class="report-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                     <div>
-                        <strong>Quarterly Analytics Q3</strong><br>
-                        <span style="color: #64748b; font-size: 0.875rem;">Generated: 10 Jan 2025, 09:15</span>
+                        <strong style="color: #c8cdd5;">Quarterly Analytics Q3</strong><br>
+                        <span style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">Generated: 10 Jan 2025, 09:15</span>
                     </div>
                     <div>
                         <span class="report-type-badge">Excel</span>
                     </div>
                 </div>
-                <div style="color: #64748b; font-size: 0.875rem;">
+                <div style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">
                     File size: 1.1 MB • 8 sheets • Analytics Dashboard
                 </div>
             </div>
@@ -802,14 +807,14 @@ def render_restructured_reports_screen(session, settings):
             <div class="report-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                     <div>
-                        <strong>Expense Breakdown</strong><br>
-                        <span style="color: #64748b; font-size: 0.875rem;">Generated: 05 Jan 2025, 16:45</span>
+                        <strong style="color: #c8cdd5;">Expense Breakdown</strong><br>
+                        <span style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">Generated: 05 Jan 2025, 16:45</span>
                     </div>
                     <div>
                         <span class="report-type-badge">CSV</span>
                     </div>
                 </div>
-                <div style="color: #64748b; font-size: 0.875rem;">
+                <div style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">
                     File size: 245 KB • 1 file • Expense Categories
                 </div>
             </div>

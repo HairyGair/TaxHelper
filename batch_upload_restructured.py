@@ -18,19 +18,30 @@ def render_restructured_batch_upload_screen(session, settings):
     Render a completely restructured batch upload interface with modern design
     """
 
-    # Custom CSS for batch upload page - Silver/Gray gradient theme with floating orb
+    # Custom CSS for batch upload page - Obsidian dark theme
     st.markdown("""
     <style>
-    /* Batch Upload Page Specific Styling */
-    .batch-upload-header {
-        background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 50%, #9e9e9e 100%);
-        color: #212121;
+    /* Batch Upload Page Specific Styling - Obsidian Theme */
+    .ob-hero {
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
+        color: #c8cdd5;
         padding: 3rem 2rem;
         border-radius: 24px;
         margin-bottom: 2rem;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 20px 60px rgba(158, 158, 158, 0.4);
+        box-shadow: 0 20px 60px rgba(79, 143, 234, 0.3);
+    }
+
+    .batch-upload-header {
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
+        color: #c8cdd5;
+        padding: 3rem 2rem;
+        border-radius: 24px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(79, 143, 234, 0.3);
     }
 
     .batch-upload-header::before {
@@ -61,31 +72,31 @@ def render_restructured_batch_upload_screen(session, settings):
     }
 
     .status-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 16px;
         padding: 1.5rem;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        border: 1px solid #f0f0f0;
+        border: 1px solid rgba(79, 143, 234, 0.12);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         height: 100%;
     }
 
     .status-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 30px rgba(158, 158, 158, 0.2);
+        box-shadow: 0 8px 30px rgba(79, 143, 234, 0.2);
     }
 
     .metric-value {
         font-size: 2.5rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #757575 0%, #616161 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #f4c430 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin: 0.5rem 0;
     }
 
     .metric-label {
-        color: #616161;
+        color: rgba(200, 205, 213, 0.38);
         font-size: 0.875rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -94,8 +105,8 @@ def render_restructured_batch_upload_screen(session, settings):
     }
 
     .upload-zone-card {
-        background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
-        border: 3px dashed #bdbdbd;
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
+        border: 3px dashed rgba(79, 143, 234, 0.12);
         border-radius: 20px;
         padding: 3rem 2rem;
         text-align: center;
@@ -106,8 +117,8 @@ def render_restructured_batch_upload_screen(session, settings):
     }
 
     .upload-zone-card:hover {
-        background: linear-gradient(135deg, #eeeeee 0%, #e0e0e0 100%);
-        border-color: #9e9e9e;
+        background: linear-gradient(135deg, #0b0e14 0%, #181d28 100%);
+        border-color: #4f8fea;
         transform: scale(1.02);
     }
 
@@ -123,55 +134,55 @@ def render_restructured_batch_upload_screen(session, settings):
     }
 
     .progress-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 20px;
         padding: 2rem;
         box-shadow: 0 10px 40px rgba(0,0,0,0.08);
         margin: 1.5rem 0;
-        border: 1px solid #e0e0e0;
+        border: 1px solid rgba(79, 143, 234, 0.12);
     }
 
     .receipt-card {
-        background: white;
+        background: #181d28;
         border-radius: 16px;
         padding: 1.5rem;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         margin-bottom: 1rem;
-        border-left: 4px solid #9e9e9e;
+        border-left: 4px solid #4f8fea;
         transition: all 0.3s ease;
     }
 
     .receipt-card:hover {
         transform: translateX(5px);
-        box-shadow: 0 6px 25px rgba(158, 158, 158, 0.15);
+        box-shadow: 0 6px 25px rgba(79, 143, 234, 0.15);
     }
 
     .receipt-card.matched {
-        border-left-color: #10b981;
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border-left-color: #36c7a0;
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
     }
 
     .receipt-card.pending {
-        border-left-color: #f59e0b;
-        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border-left-color: #4f8fea;
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
     }
 
     .receipt-card.uploaded {
-        border-left-color: #3b82f6;
-        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        border-left-color: #4f8fea;
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
     }
 
     .workflow-selector {
-        background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
         border-radius: 20px;
         padding: 2rem;
         margin: 2rem 0;
-        border: 2px solid #e0e0e0;
+        border: 2px solid rgba(79, 143, 234, 0.12);
     }
 
     .workflow-option {
-        background: white;
-        border: 2px solid #e0e0e0;
+        background: rgba(18, 22, 31, 0.92);
+        border: 2px solid rgba(79, 143, 234, 0.12);
         border-radius: 16px;
         padding: 1.5rem;
         margin: 1rem 0;
@@ -180,16 +191,16 @@ def render_restructured_batch_upload_screen(session, settings):
     }
 
     .workflow-option:hover {
-        background: linear-gradient(135deg, #eeeeee 0%, #e0e0e0 100%);
-        border-color: #9e9e9e;
+        background: linear-gradient(135deg, #0b0e14 0%, #181d28 100%);
+        border-color: #4f8fea;
         transform: translateY(-3px);
-        box-shadow: 0 6px 20px rgba(158, 158, 158, 0.2);
+        box-shadow: 0 6px 20px rgba(79, 143, 234, 0.2);
     }
 
     .workflow-option.selected {
-        background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%);
-        border-color: #757575;
-        box-shadow: 0 6px 20px rgba(117, 117, 117, 0.3);
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
+        border-color: #4f8fea;
+        box-shadow: 0 6px 20px rgba(79, 143, 234, 0.3);
     }
 
     .match-indicator {
@@ -217,8 +228,8 @@ def render_restructured_batch_upload_screen(session, settings):
     }
 
     .stats-banner {
-        background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
-        border-left: 6px solid #9e9e9e;
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
+        border-left: 6px solid #4f8fea;
         padding: 1.5rem;
         border-radius: 12px;
         margin: 1rem 0;
@@ -237,14 +248,14 @@ def render_restructured_batch_upload_screen(session, settings):
         top: 0;
         bottom: 0;
         width: 2px;
-        background: linear-gradient(180deg, #e0e0e0 0%, #bdbdbd 100%);
+        background: linear-gradient(180deg, #4f8fea 0%, rgba(79, 143, 234, 0.12) 100%);
     }
 
     .history-item {
         position: relative;
         padding: 1rem;
         margin-bottom: 1rem;
-        background: white;
+        background: #181d28;
         border-radius: 12px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
@@ -257,17 +268,17 @@ def render_restructured_batch_upload_screen(session, settings):
         width: 12px;
         height: 12px;
         border-radius: 50%;
-        background: #9e9e9e;
-        border: 3px solid white;
-        box-shadow: 0 0 0 2px #e0e0e0;
+        background: #4f8fea;
+        border: 3px solid #12161f;
+        box-shadow: 0 0 0 2px rgba(79, 143, 234, 0.12);
     }
 
     .empty-state {
         text-align: center;
         padding: 4rem 2rem;
-        background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+        background: linear-gradient(135deg, #181d28 0%, #0b0e14 100%);
         border-radius: 20px;
-        border: 2px dashed #bdbdbd;
+        border: 2px dashed rgba(79, 143, 234, 0.12);
         margin: 2rem 0;
     }
 
@@ -309,17 +320,11 @@ def render_restructured_batch_upload_screen(session, settings):
     </style>
     """, unsafe_allow_html=True)
 
-    # Header Section with floating orb animation
+    # Header Section with Obsidian theme
     st.markdown("""
-    <div class="batch-upload-header">
-        <div style="position: relative; z-index: 1;">
-            <h1 style="margin: 0; font-size: 3rem; font-weight: 800;">
-                Batch Receipt Upload
-            </h1>
-            <p style="margin: 1rem 0 0 0; font-size: 1.2rem; opacity: 0.95;">
-                Upload multiple receipts at once and match them to transactions automatically
-            </p>
-        </div>
+    <div class="ob-hero">
+        <h1>Batch Receipt Upload</h1>
+        <p>Upload multiple receipts at once and match them to transactions automatically</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -358,7 +363,7 @@ def render_restructured_batch_upload_screen(session, settings):
         <div class="status-card">
             <div class="metric-label">Receipts Uploaded</div>
             <div class="metric-value">{receipts_uploaded}</div>
-            <div style="color: #757575; font-size: 0.875rem; margin-top: 0.5rem;">
+            <div style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem; margin-top: 0.5rem;">
                 All time total
             </div>
         </div>
@@ -369,11 +374,11 @@ def render_restructured_batch_upload_screen(session, settings):
         <div class="status-card">
             <div class="metric-label">Pending Processing</div>
             <div class="metric-value" style="
-                background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+                background: linear-gradient(135deg, #e5b567 0%, #ea580c 100%);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
             ">{pending_transactions}</div>
-            <div style="color: #f59e0b; font-size: 0.875rem; margin-top: 0.5rem;">
+            <div style="color: #e5b567; font-size: 0.875rem; margin-top: 0.5rem;">
                 Needs review
             </div>
         </div>
@@ -384,11 +389,11 @@ def render_restructured_batch_upload_screen(session, settings):
         <div class="status-card">
             <div class="metric-label">Matched & Linked</div>
             <div class="metric-value" style="
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                background: linear-gradient(135deg, #36c7a0 0%, #36c7a0 100%);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
             ">{matched_receipts}</div>
-            <div style="color: #10b981; font-size: 0.875rem; margin-top: 0.5rem;">
+            <div style="color: #36c7a0; font-size: 0.875rem; margin-top: 0.5rem;">
                 Successfully matched
             </div>
         </div>
@@ -399,11 +404,11 @@ def render_restructured_batch_upload_screen(session, settings):
         <div class="status-card">
             <div class="metric-label">This Month</div>
             <div class="metric-value" style="
-                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                background: linear-gradient(135deg, #7aafff 0%, #7aafff 100%);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
             ">{monthly_uploads}</div>
-            <div style="color: #3b82f6; font-size: 0.875rem; margin-top: 0.5rem;">
+            <div style="color: #7aafff; font-size: 0.875rem; margin-top: 0.5rem;">
                 Recent activity
             </div>
         </div>
@@ -434,9 +439,9 @@ def render_restructured_batch_upload_screen(session, settings):
         st.markdown("""
         <div class="upload-zone-card">
             <div class="upload-icon-animated">📎</div>
-            <h3 style="color: #424242; margin: 0 0 0.5rem 0;">Drop Receipt Images Here</h3>
-            <p style="color: #757575; margin: 0;">or click below to browse files</p>
-            <p style="color: #9e9e9e; font-size: 0.875rem; margin-top: 1rem;">
+            <h3 style="color: #c8cdd5; margin: 0 0 0.5rem 0;">Drop Receipt Images Here</h3>
+            <p style="color: rgba(200, 205, 213, 0.65); margin: 0;">or click below to browse files</p>
+            <p style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem; margin-top: 1rem;">
                 Supports: PNG, JPG, JPEG, PDF | Max 20 files | 10MB each
             </p>
         </div>
@@ -488,16 +493,16 @@ def render_restructured_batch_upload_screen(session, settings):
                 <div class="receipt-card pending">
                     <div style="display: flex; justify-content: space-between; align-items: start;">
                         <div style="flex: 1;">
-                            <div style="font-weight: 600; color: #1f2937; font-size: 1.1rem; margin-bottom: 0.5rem;">
+                            <div style="font-weight: 600; color: #c8cdd5; font-size: 1.1rem; margin-bottom: 0.5rem;">
                                 {txn.description[:50]}{'...' if len(txn.description) > 50 else ''}
                             </div>
-                            <div style="color: #6b7280; font-size: 0.875rem;">
+                            <div style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">
                                 📅 {txn.date.strftime('%d %B %Y')}
                                 • Category: {txn.guessed_category if txn.guessed_category else 'Uncategorized'}
                             </div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 1.5rem; font-weight: 700; color: {'#10b981' if is_income else '#ef4444'};">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: {'#36c7a0' if is_income else '#e07a5f'};">
                                 {'+ ' if is_income else '- '}{format_currency(abs(amount))}
                             </div>
                             <div class="match-indicator {confidence}">
@@ -531,11 +536,11 @@ def render_restructured_batch_upload_screen(session, settings):
             st.markdown("""
             <div class="empty-state">
                 <div class="empty-state-icon">🎉</div>
-                <h3 style="color: #424242; margin-bottom: 0.5rem;">All Caught Up!</h3>
-                <p style="color: #757575; font-size: 1.1rem;">
+                <h3 style="color: #c8cdd5; margin-bottom: 0.5rem;">All Caught Up!</h3>
+                <p style="color: rgba(200, 205, 213, 0.65); font-size: 1.1rem;">
                     No unreviewed transactions to match
                 </p>
-                <p style="color: #9e9e9e; margin-top: 1rem;">
+                <p style="color: rgba(200, 205, 213, 0.38); margin-top: 1rem;">
                     Upload new bank statements to see transactions here
                 </p>
             </div>
@@ -566,10 +571,10 @@ def render_restructured_batch_upload_screen(session, settings):
                 <div class="receipt-card uploaded">
                     <div style="display: flex; justify-content: space-between; align-items: start;">
                         <div style="flex: 1;">
-                            <div style="font-weight: 700; color: #1f2937; font-size: 1.25rem; margin-bottom: 0.5rem;">
+                            <div style="font-weight: 700; color: #c8cdd5; font-size: 1.25rem; margin-bottom: 0.5rem;">
                                 {expense.supplier}
                             </div>
-                            <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.75rem;">
+                            <div style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem; margin-bottom: 0.75rem;">
                                 📅 {expense.date.strftime('%d %B %Y')}
                                 • Category: {expense.category}
                             </div>
@@ -580,7 +585,7 @@ def render_restructured_batch_upload_screen(session, settings):
                             </div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 2rem; font-weight: 800; color: #ef4444; margin-bottom: 0.5rem;">
+                            <div style="font-size: 2rem; font-weight: 800; color: #e07a5f; margin-bottom: 0.5rem;">
                                 -{format_currency(expense.amount)}
                             </div>
                             <div class="confidence-badge confidence-{conf_class}">
@@ -629,8 +634,8 @@ def render_restructured_batch_upload_screen(session, settings):
             st.markdown("""
             <div class="empty-state">
                 <div class="empty-state-icon">📎</div>
-                <h3 style="color: #424242; margin-bottom: 0.5rem;">No Receipts to Review</h3>
-                <p style="color: #757575; font-size: 1.1rem;">
+                <h3 style="color: #c8cdd5; margin-bottom: 0.5rem;">No Receipts to Review</h3>
+                <p style="color: rgba(200, 205, 213, 0.65); font-size: 1.1rem;">
                     Upload receipts in the "Upload Receipts" tab to see them here
                 </p>
             </div>
@@ -657,19 +662,19 @@ def render_restructured_batch_upload_screen(session, settings):
             # Display summary banner
             st.markdown(f"""
             <div class="stats-banner">
-                <h3 style="margin: 0 0 1rem 0; color: #424242;">Historical Overview</h3>
+                <h3 style="margin: 0 0 1rem 0; color: #c8cdd5;">Historical Overview</h3>
                 <div style="display: flex; gap: 3rem; flex-wrap: wrap;">
                     <div>
-                        <span style="color: #757575; font-size: 0.875rem;">Total Receipts:</span>
-                        <strong style="color: #424242; font-size: 1.25rem; display: block;">{total_receipts}</strong>
+                        <span style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">Total Receipts:</span>
+                        <strong style="color: #c8cdd5; font-size: 1.25rem; display: block;">{total_receipts}</strong>
                     </div>
                     <div>
-                        <span style="color: #757575; font-size: 0.875rem;">Total Value:</span>
-                        <strong style="color: #ef4444; font-size: 1.25rem; display: block;">{format_currency(total_amount)}</strong>
+                        <span style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">Total Value:</span>
+                        <strong style="color: #e07a5f; font-size: 1.25rem; display: block;">{format_currency(total_amount)}</strong>
                     </div>
                     <div>
-                        <span style="color: #757575; font-size: 0.875rem;">Average Receipt:</span>
-                        <strong style="color: #424242; font-size: 1.25rem; display: block;">{format_currency(avg_amount)}</strong>
+                        <span style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">Average Receipt:</span>
+                        <strong style="color: #c8cdd5; font-size: 1.25rem; display: block;">{format_currency(avg_amount)}</strong>
                     </div>
                 </div>
             </div>
@@ -719,8 +724,8 @@ def render_restructured_batch_upload_screen(session, settings):
                 x=months_display,
                 y=receipt_totals,
                 mode='lines+markers',
-                line=dict(color='#ef4444', width=3),
-                marker=dict(size=10, color='#ef4444'),
+                line=dict(color='#e07a5f', width=3),
+                marker=dict(size=10, color='#e07a5f'),
                 yaxis='y2',
                 hovertemplate='<b>%{x}</b><br>Amount: £%{y:,.2f}<extra></extra>'
             ))
@@ -729,21 +734,25 @@ def render_restructured_batch_upload_screen(session, settings):
                 height=400,
                 showlegend=True,
                 hovermode='x unified',
-                plot_bgcolor='white',
-                paper_bgcolor='white',
+                plot_bgcolor='#12161f',
+                paper_bgcolor='#12161f',
+                font=dict(color='#c8cdd5'),
                 yaxis=dict(
-                    title="Receipt Count",
+                    title=dict(text="Receipt Count", font=dict(color='#c8cdd5')),
+                    tickfont=dict(color='#c8cdd5'),
                     showgrid=True,
-                    gridcolor='#f0f0f0'
+                    gridcolor='rgba(79, 143, 234, 0.12)'
                 ),
                 yaxis2=dict(
-                    title="Total Amount (£)",
+                    title=dict(text="Total Amount (£)", font=dict(color='#c8cdd5')),
+                    tickfont=dict(color='#c8cdd5'),
                     overlaying='y',
                     side='right',
                     showgrid=False
                 ),
                 xaxis=dict(
                     title="",
+                    tickfont=dict(color='#c8cdd5'),
                     showgrid=False,
                     tickangle=-45
                 ),
@@ -770,19 +779,19 @@ def render_restructured_batch_upload_screen(session, settings):
                 <div class="history-item">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <div style="font-weight: 600; color: #1f2937; margin-bottom: 0.25rem;">
+                            <div style="font-weight: 600; color: #c8cdd5; margin-bottom: 0.25rem;">
                                 {expense.supplier}
                             </div>
-                            <div style="color: #6b7280; font-size: 0.875rem;">
+                            <div style="color: rgba(200, 205, 213, 0.65); font-size: 0.875rem;">
                                 {expense.date.strftime('%d %B %Y')} • {expense.category}
                             </div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 1.25rem; font-weight: 700; color: #ef4444;">
+                            <div style="font-size: 1.25rem; font-weight: 700; color: #e07a5f;">
                                 -{format_currency(expense.amount)}
                             </div>
                             <a href="{expense.receipt_link}" target="_blank" style="
-                                color: #3b82f6;
+                                color: #7aafff;
                                 font-size: 0.75rem;
                                 text-decoration: none;
                             ">📎 View Receipt</a>
@@ -826,8 +835,9 @@ def render_restructured_batch_upload_screen(session, settings):
             fig_pie.update_layout(
                 height=400,
                 showlegend=True,
-                plot_bgcolor='white',
-                paper_bgcolor='white',
+                plot_bgcolor='#12161f',
+                paper_bgcolor='#12161f',
+                font=dict(color='#c8cdd5'),
                 margin=dict(l=20, r=20, t=40, b=20)
             )
 
@@ -837,8 +847,8 @@ def render_restructured_batch_upload_screen(session, settings):
             st.markdown("""
             <div class="empty-state">
                 <div class="empty-state-icon">📚</div>
-                <h3 style="color: #424242; margin-bottom: 0.5rem;">No History Yet</h3>
-                <p style="color: #757575; font-size: 1.1rem;">
+                <h3 style="color: #c8cdd5; margin-bottom: 0.5rem;">No History Yet</h3>
+                <p style="color: rgba(200, 205, 213, 0.65); font-size: 1.1rem;">
                     Your receipt upload history will appear here once you start uploading
                 </p>
             </div>

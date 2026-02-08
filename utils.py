@@ -5,7 +5,7 @@ Handles CSV parsing, date parsing, duplicate detection, Excel export, and rules 
 
 import pandas as pd
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil import parser as date_parser
 from typing import List, Dict, Tuple, Optional
 import io
@@ -351,15 +351,74 @@ def parse_csv(
         return None, errors
 
     try:
-        # Try to read CSV with different encodings
-        try:
-            df = pd.read_csv(io.BytesIO(file_content), encoding='utf-8')
-        except UnicodeDecodeError:
+        # Try to read CSV with multiple encoding / format strategies
+        df = None
+        _parse_errors = []
+        _winning_enc = 'utf-8'
+
+        for enc in ('utf-8-sig', 'utf-8', 'latin-1', 'cp1252'):
             try:
-                df = pd.read_csv(io.BytesIO(file_content), encoding='latin-1')
+                df = pd.read_csv(
+                    io.BytesIO(file_content),
+                    encoding=enc,
+                    skipinitialspace=True,
+                    on_bad_lines='skip',
+                )
+                if len(df.columns) >= 2:
+                    _winning_enc = enc
+                    break  # looks like a valid parse
+                df = None  # single column — probably wrong delimiter
             except Exception as e:
-                errors.append(f"Unable to parse CSV file. Please check file encoding.")
-                return None, errors
+                _parse_errors.append(f"{enc}: {e}")
+                continue
+
+        if df is None:
+            errors.append(
+                "Unable to parse CSV file. Please check the file encoding and format. "
+                "Ensure the file is a standard comma-separated CSV."
+            )
+            import logging
+            for pe in _parse_errors:
+                logging.error(f"CSV parse attempt failed — {pe}")
+            return None, errors
+
+        # ------------------------------------------------------------------
+        # Auto-detect bank metadata header rows
+        # Many bank CSVs (Lloyds, Halifax, etc.) have lines like
+        #   "Account Name:","FlexBasic ****1234"
+        # before the real column headers. If our expected columns aren't in
+        # the parsed headers, scan the first 20 rows for the real header.
+        # ------------------------------------------------------------------
+        expected_cols = {
+            column_mappings.get('column_date', 'Date'),
+            column_mappings.get('column_description', 'Description'),
+        }
+        # Strip whitespace from parsed column names
+        df.columns = df.columns.str.strip()
+
+        if not expected_cols.issubset(set(df.columns)):
+            # Scan raw CSV lines for the real header row.
+            # We can't rely on the parsed DataFrame because pandas may have
+            # skipped wider rows when the metadata header has fewer columns.
+            raw_text = file_content.decode(_winning_enc, errors='replace')
+            lines = raw_text.splitlines()
+            header_row = None
+            for idx, line in enumerate(lines[:30]):
+                values = {v.strip().strip('"').strip() for v in line.split(',')}
+                if expected_cols.issubset(values):
+                    header_row = idx
+                    break
+
+            if header_row is not None:
+                # Re-parse, skipping the metadata rows
+                df = pd.read_csv(
+                    io.BytesIO(file_content),
+                    encoding=_winning_enc,
+                    skipinitialspace=True,
+                    on_bad_lines='skip',
+                    skiprows=header_row,
+                )
+                df.columns = df.columns.str.strip()
 
         # Security: Validate row count (max 100,000 rows)
         MAX_ROWS = 100_000
@@ -373,27 +432,56 @@ def parse_csv(
             errors.append(f"Too many columns in CSV. Maximum is {MAX_COLUMNS} columns")
             return None, errors
 
+        # ------------------------------------------------------------------
+        # Auto-detect amount columns when settings are empty or don't match
+        # ------------------------------------------------------------------
+        csv_cols = set(df.columns)
+
+        # Common column name variants for auto-detection
+        _PAID_IN_NAMES = ['Paid in', 'Paid In', 'Credit', 'Credits', 'Money in', 'Amount In']
+        _PAID_OUT_NAMES = ['Paid out', 'Paid Out', 'Debit', 'Debits', 'Money out', 'Amount Out']
+        _VALUE_NAMES = ['Value', 'Amount', 'Transaction Amount']
+
+        def _auto_detect(mapping_key, candidates):
+            """If setting is empty or doesn't match CSV, try common names."""
+            current = column_mappings.get(mapping_key, '')
+            if current and current in csv_cols:
+                return  # already good
+            for name in candidates:
+                if name in csv_cols:
+                    column_mappings[mapping_key] = name
+                    return
+
+        _auto_detect('column_date', ['Date', 'Transaction Date', 'Trans Date'])
+        _auto_detect('column_description', ['Description', 'Details', 'Narrative', 'Transaction Description'])
+        _auto_detect('column_paid_in', _PAID_IN_NAMES)
+        _auto_detect('column_paid_out', _PAID_OUT_NAMES)
+
         # Check if using single Value column or separate Paid in/Paid out columns
         use_value_column = False
-        if column_mappings.get('column_value') and column_mappings['column_value'] in df.columns:
+        if column_mappings.get('column_value') and column_mappings['column_value'] in csv_cols:
             use_value_column = True
-        elif (not column_mappings.get('column_paid_in') or column_mappings['column_paid_in'] not in df.columns) and \
-             (not column_mappings.get('column_paid_out') or column_mappings['column_paid_out'] not in df.columns):
-            # Try to find Value column if paid_in/paid_out are missing
-            if 'Value' in df.columns:
-                column_mappings['column_value'] = 'Value'
-                use_value_column = True
+        elif (not column_mappings.get('column_paid_in') or column_mappings['column_paid_in'] not in csv_cols) and \
+             (not column_mappings.get('column_paid_out') or column_mappings['column_paid_out'] not in csv_cols):
+            # Try to find a single Value column
+            for name in _VALUE_NAMES:
+                if name in csv_cols:
+                    column_mappings['column_value'] = name
+                    use_value_column = True
+                    break
 
         # Validate required columns exist
         required_columns = ['column_date', 'column_description']
         if use_value_column:
-            if column_mappings.get('column_value') not in df.columns:
+            if column_mappings.get('column_value') not in csv_cols:
                 errors.append(f"Required column '{column_mappings.get('column_value')}' not found in CSV")
         else:
-            if column_mappings.get('column_paid_in') not in df.columns:
-                errors.append(f"Required column '{column_mappings.get('column_paid_in')}' not found in CSV")
-            if column_mappings.get('column_paid_out') not in df.columns:
-                errors.append(f"Required column '{column_mappings.get('column_paid_out')}' not found in CSV")
+            if column_mappings.get('column_paid_in') not in csv_cols:
+                errors.append(f"Required column '{column_mappings.get('column_paid_in')}' not found in CSV. "
+                              f"Available columns: {', '.join(df.columns)}")
+            if column_mappings.get('column_paid_out') not in csv_cols:
+                errors.append(f"Required column '{column_mappings.get('column_paid_out')}' not found in CSV. "
+                              f"Available columns: {', '.join(df.columns)}")
 
         for col_key in required_columns:
             expected_col = column_mappings.get(col_key)

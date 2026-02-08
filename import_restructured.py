@@ -10,6 +10,7 @@ from sqlalchemy import func
 import plotly.graph_objects as go
 from models import Transaction, Rule
 from utils import parse_csv, format_currency
+from components.ui.interactions import show_toast
 
 def render_restructured_import_screen(session, settings):
     """
@@ -21,15 +22,16 @@ def render_restructured_import_screen(session, settings):
     <style>
     /* Import Screen Specific Styling */
     .import-header {
-        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-        color: white;
+        background: linear-gradient(135deg, rgba(79, 143, 234, 0.2) 0%, rgba(79, 143, 234, 0.1) 100%);
+        color: #c8cdd5;
         padding: 3rem 2rem;
         border-radius: 24px;
         margin-bottom: 2rem;
         position: relative;
         overflow: hidden;
+        border: 1px solid rgba(79, 143, 234, 0.08);
     }
-    
+
     .import-header::before {
         content: '';
         position: absolute;
@@ -37,18 +39,18 @@ def render_restructured_import_screen(session, settings):
         right: -10%;
         width: 500px;
         height: 500px;
-        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        background: radial-gradient(circle, rgba(79, 143, 234, 0.1) 0%, transparent 70%);
         animation: pulse 4s ease-in-out infinite;
     }
-    
+
     @keyframes pulse {
         0%, 100% { transform: scale(1); opacity: 0.3; }
         50% { transform: scale(1.1); opacity: 0.5; }
     }
-    
+
     .upload-zone {
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-        border: 3px dashed #3b82f6;
+        background: linear-gradient(135deg, #181d28 0%, #12161f 100%);
+        border: 3px dashed rgba(79, 143, 234, 0.5);
         border-radius: 20px;
         padding: 3rem;
         text-align: center;
@@ -56,10 +58,10 @@ def render_restructured_import_screen(session, settings):
         position: relative;
         overflow: hidden;
     }
-    
+
     .upload-zone:hover {
-        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-        border-color: #2563eb;
+        background: linear-gradient(135deg, #1f2538 0%, #181d28 100%);
+        border-color: #4f8fea;
         transform: scale(1.02);
     }
     
@@ -95,46 +97,47 @@ def render_restructured_import_screen(session, settings):
         left: 50%;
         width: 100%;
         height: 2px;
-        background: #e5e7eb;
+        background: rgba(79, 143, 234, 0.08);
         z-index: -1;
     }
-    
+
     .timeline-step.active::before {
-        background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+        background: linear-gradient(90deg, rgba(79, 143, 234, 0.6) 0%, rgba(79, 143, 234, 0.3) 100%);
     }
-    
+
     .step-circle {
         width: 40px;
         height: 40px;
         border-radius: 50%;
-        background: white;
-        border: 3px solid #e5e7eb;
+        background: #12161f;
+        border: 3px solid rgba(79, 143, 234, 0.08);
         margin: 0 auto 0.5rem;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: bold;
         transition: all 0.3s ease;
+        color: #c8cdd5;
     }
-    
+
     .step-circle.active {
-        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-        border-color: #3b82f6;
-        color: white;
+        background: linear-gradient(135deg, rgba(79, 143, 234, 0.6) 0%, rgba(79, 143, 234, 0.4) 100%);
+        border-color: #4f8fea;
+        color: #c8cdd5;
         transform: scale(1.2);
     }
-    
+
     .step-circle.complete {
-        background: #10b981;
-        border-color: #10b981;
-        color: white;
+        background: #36c7a0;
+        border-color: #36c7a0;
+        color: #c8cdd5;
     }
-    
+
     .preview-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 16px;
         padding: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         margin-bottom: 1rem;
         border-left: 4px solid;
         transition: all 0.3s ease;
@@ -146,45 +149,47 @@ def render_restructured_import_screen(session, settings):
     }
     
     .preview-card.income {
-        border-left-color: #10b981;
+        border-left-color: #36c7a0;
     }
     
     .preview-card.expense {
-        border-left-color: #ef4444;
+        border-left-color: #e07a5f;
     }
     
     .preview-card.uncategorized {
-        border-left-color: #f59e0b;
+        border-left-color: #e5b567;
     }
     
     .account-selector {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 16px;
         padding: 2rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         margin: 1.5rem 0;
+        border: 1px solid rgba(79, 143, 234, 0.08);
     }
-    
+
     .account-option {
-        background: #f9fafb;
-        border: 2px solid #e5e7eb;
+        background: #181d28;
+        border: 2px solid rgba(79, 143, 234, 0.08);
         border-radius: 12px;
         padding: 1rem;
         margin: 0.5rem;
         cursor: pointer;
         transition: all 0.3s ease;
+        color: #c8cdd5;
     }
-    
+
     .account-option:hover {
-        background: #eff6ff;
-        border-color: #3b82f6;
+        background: #1f2538;
+        border-color: rgba(79, 143, 234, 0.5);
         transform: translateY(-2px);
     }
-    
+
     .account-option.selected {
-        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-        border-color: #3b82f6;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        background: linear-gradient(135deg, rgba(79, 143, 234, 0.2) 0%, rgba(79, 143, 234, 0.1) 100%);
+        border-color: #4f8fea;
+        box-shadow: 0 4px 12px rgba(79, 143, 234, 0.3);
     }
     
     .success-animation {
@@ -203,28 +208,29 @@ def render_restructured_import_screen(session, settings):
         gap: 1rem;
         margin: 2rem 0;
     }
-    
+
     .stat-box {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        background: linear-gradient(135deg, rgba(79, 143, 234, 0.2) 0%, rgba(79, 143, 234, 0.1) 100%);
         border-radius: 12px;
         padding: 1.5rem;
         text-align: center;
+        border: 1px solid rgba(79, 143, 234, 0.08);
     }
-    
+
     .stat-value {
         font-size: 2rem;
         font-weight: 700;
-        color: #92400e;
+        color: #4f8fea;
     }
-    
+
     .stat-label {
-        color: #78350f;
+        color: rgba(200, 205, 213, 0.38);
         font-size: 0.875rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-top: 0.5rem;
     }
-    
+
     </style>
     """, unsafe_allow_html=True)
     
@@ -232,7 +238,7 @@ def render_restructured_import_screen(session, settings):
     # HEADER SECTION
     # ============================================================================
     st.markdown("""
-    <div class="import-header">
+    <div class="ob-hero">
         <div style="position: relative; z-index: 1;">
             <h1 style="margin: 0; font-size: 3rem; font-weight: 800;">
                 📥 Import Bank Statements
@@ -272,13 +278,13 @@ def render_restructured_import_screen(session, settings):
     
     with col1:
         st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); 
+        <div style="background: linear-gradient(135deg, rgba(79, 143, 234, 0.2) 0%, rgba(79, 143, 234, 0.1) 100%);
                     border-radius: 16px; padding: 1.5rem; text-align: center;
-                    border: 1px solid #bfdbfe;">
-            <div style="font-size: 2.5rem; font-weight: 700; color: #1e40af;">
+                    border: 1px solid rgba(79, 143, 234, 0.08);">
+            <div style="font-size: 2.5rem; font-weight: 700; color: #4f8fea;">
                 {total_transactions:,}
             </div>
-            <div style="color: #3730a3; font-size: 0.875rem; text-transform: uppercase; 
+            <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem; text-transform: uppercase;
                         letter-spacing: 0.05em; margin-top: 0.5rem;">
                 Total Transactions
             </div>
@@ -287,13 +293,13 @@ def render_restructured_import_screen(session, settings):
     
     with col2:
         st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); 
+        <div style="background: linear-gradient(135deg, rgba(229, 181, 103, 0.2) 0%, rgba(229, 181, 103, 0.1) 100%);
                     border-radius: 16px; padding: 1.5rem; text-align: center;
-                    border: 1px solid #fbbf24;">
-            <div style="font-size: 2.5rem; font-weight: 700; color: #92400e;">
+                    border: 1px solid rgba(79, 143, 234, 0.08);">
+            <div style="font-size: 2.5rem; font-weight: 700; color: #e5b567;">
                 {unreviewed_count}
             </div>
-            <div style="color: #78350f; font-size: 0.875rem; text-transform: uppercase; 
+            <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem; text-transform: uppercase;
                         letter-spacing: 0.05em; margin-top: 0.5rem;">
                 Need Review
             </div>
@@ -302,13 +308,13 @@ def render_restructured_import_screen(session, settings):
     
     with col3:
         st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); 
+        <div style="background: linear-gradient(135deg, rgba(54, 199, 160, 0.2) 0%, rgba(54, 199, 160, 0.1) 100%);
                     border-radius: 16px; padding: 1.5rem; text-align: center;
-                    border: 1px solid #6ee7b7;">
-            <div style="font-size: 2.5rem; font-weight: 700; color: #064e3b;">
+                    border: 1px solid rgba(79, 143, 234, 0.08);">
+            <div style="font-size: 2.5rem; font-weight: 700; color: #36c7a0;">
                 {active_rules}
             </div>
-            <div style="color: #065f46; font-size: 0.875rem; text-transform: uppercase; 
+            <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem; text-transform: uppercase;
                         letter-spacing: 0.05em; margin-top: 0.5rem;">
                 Active Rules
             </div>
@@ -317,13 +323,13 @@ def render_restructured_import_screen(session, settings):
     
     with col4:
         st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); 
+        <div style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.2) 0%, rgba(236, 72, 153, 0.1) 100%);
                     border-radius: 16px; padding: 1.5rem; text-align: center;
-                    border: 1px solid #f9a8d4;">
-            <div style="font-size: 2.5rem; font-weight: 700; color: #831843;">
+                    border: 1px solid rgba(79, 143, 234, 0.08);">
+            <div style="font-size: 2.5rem; font-weight: 700; color: #ec4899;">
                 {monthly_imports}
             </div>
-            <div style="color: #831843; font-size: 0.875rem; text-transform: uppercase; 
+            <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem; text-transform: uppercase;
                         letter-spacing: 0.05em; margin-top: 0.5rem;">
                 This Month
             </div>
@@ -343,19 +349,19 @@ def render_restructured_import_screen(session, settings):
     <div class="status-timeline">
         <div class="timeline-step {}">
             <div class="step-circle {}">1</div>
-            <div style="font-size: 0.875rem; color: #6b7280;">Upload CSV</div>
+            <div style="font-size: 0.875rem; color: rgba(200, 205, 213, 0.38);">Upload CSV</div>
         </div>
         <div class="timeline-step {}">
             <div class="step-circle {}">2</div>
-            <div style="font-size: 0.875rem; color: #6b7280;">Preview & Verify</div>
+            <div style="font-size: 0.875rem; color: rgba(200, 205, 213, 0.38);">Preview & Verify</div>
         </div>
         <div class="timeline-step {}">
             <div class="step-circle {}">3</div>
-            <div style="font-size: 0.875rem; color: #6b7280;">Select Account</div>
+            <div style="font-size: 0.875rem; color: rgba(200, 205, 213, 0.38);">Select Account</div>
         </div>
         <div class="timeline-step {}">
             <div class="step-circle {}">4</div>
-            <div style="font-size: 0.875rem; color: #6b7280;">Import Complete</div>
+            <div style="font-size: 0.875rem; color: rgba(200, 205, 213, 0.38);">Import Complete</div>
         </div>
     </div>
     """.format(
@@ -379,8 +385,8 @@ def render_restructured_import_screen(session, settings):
     st.markdown("""
     <div class="upload-zone">
         <div class="upload-icon">📁</div>
-        <h3 style="color: #1e40af; margin: 0 0 0.5rem 0;">Drop your CSV file here</h3>
-        <p style="color: #6b7280; margin: 0;">or click to browse files</p>
+        <h3 style="color: #4f8fea; margin: 0 0 0.5rem 0;">Drop your CSV file here</h3>
+        <p style="color: rgba(200, 205, 213, 0.38); margin: 0;">or click to browse files</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -425,8 +431,8 @@ def render_restructured_import_screen(session, settings):
             # Success animation
             st.markdown("""
             <div class="success-animation" style="
-                background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-                border: 2px solid #10b981;
+                background: linear-gradient(135deg, rgba(54, 199, 160, 0.2) 0%, rgba(54, 199, 160, 0.1) 100%);
+                border: 2px solid #36c7a0;
                 border-radius: 16px;
                 padding: 1.5rem;
                 margin: 2rem 0;
@@ -434,8 +440,8 @@ def render_restructured_import_screen(session, settings):
                 <div style="display: flex; align-items: center; gap: 1rem;">
                     <div style="font-size: 3rem;">✅</div>
                     <div>
-                        <h3 style="margin: 0; color: #064e3b;">File Parsed Successfully!</h3>
-                        <p style="margin: 0.5rem 0 0 0; color: #065f46;">
+                        <h3 style="margin: 0; color: #36c7a0;">File Parsed Successfully!</h3>
+                        <p style="margin: 0.5rem 0 0 0; color: rgba(200, 205, 213, 0.38);">
                             Found {count} transactions ready to import
                         </p>
                     </div>
@@ -459,31 +465,31 @@ def render_restructured_import_screen(session, settings):
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.markdown(f"""
-                <div style="background: #d1fae5; border-radius: 12px; padding: 1rem; text-align: center;">
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #064e3b;">
+                <div style="background: rgba(54, 199, 160, 0.2); border-radius: 12px; padding: 1rem; text-align: center; border: 1px solid rgba(79, 143, 234, 0.08);">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #36c7a0;">
                         {income_count}
                     </div>
-                    <div style="color: #065f46; font-size: 0.875rem;">Income</div>
+                    <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem;">Income</div>
                 </div>
                 """, unsafe_allow_html=True)
-            
+
             with col2:
                 st.markdown(f"""
-                <div style="background: #fee2e2; border-radius: 12px; padding: 1rem; text-align: center;">
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #7f1d1d;">
+                <div style="background: rgba(224, 122, 95, 0.2); border-radius: 12px; padding: 1rem; text-align: center; border: 1px solid rgba(79, 143, 234, 0.08);">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #e07a5f;">
                         {expense_count}
                     </div>
-                    <div style="color: #991b1b; font-size: 0.875rem;">Expenses</div>
+                    <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem;">Expenses</div>
                 </div>
                 """, unsafe_allow_html=True)
-            
+
             with col3:
                 st.markdown(f"""
-                <div style="background: #fef3c7; border-radius: 12px; padding: 1rem; text-align: center;">
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #78350f;">
+                <div style="background: rgba(229, 181, 103, 0.2); border-radius: 12px; padding: 1rem; text-align: center; border: 1px solid rgba(79, 143, 234, 0.08);">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #e5b567;">
                         {uncategorized_count}
                     </div>
-                    <div style="color: #92400e; font-size: 0.875rem;">Uncategorized</div>
+                    <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem;">Uncategorized</div>
                 </div>
                 """, unsafe_allow_html=True)
             
@@ -497,17 +503,17 @@ def render_restructured_import_screen(session, settings):
                 
                 # Determine card style based on type
                 if row['guessed_type'] == 'Income':
-                    border_color = "#10b981"
-                    bg_gradient = "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)"
-                    amount_color = "#064e3b"
+                    border_color = "#36c7a0"
+                    bg_gradient = "linear-gradient(135deg, rgba(54, 199, 160, 0.2) 0%, rgba(54, 199, 160, 0.1) 100%)"
+                    amount_color = "#36c7a0"
                 elif row['guessed_type'] == 'Expense':
-                    border_color = "#ef4444"
-                    bg_gradient = "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)"
-                    amount_color = "#7f1d1d"
+                    border_color = "#e07a5f"
+                    bg_gradient = "linear-gradient(135deg, rgba(224, 122, 95, 0.2) 0%, rgba(224, 122, 95, 0.1) 100%)"
+                    amount_color = "#e07a5f"
                 else:
-                    border_color = "#f59e0b"
-                    bg_gradient = "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)"
-                    amount_color = "#78350f"
+                    border_color = "#e5b567"
+                    bg_gradient = "linear-gradient(135deg, rgba(229, 181, 103, 0.2) 0%, rgba(229, 181, 103, 0.1) 100%)"
+                    amount_color = "#e5b567"
                 
                 st.markdown(f"""
                 <div class="preview-card" style="
@@ -516,11 +522,11 @@ def render_restructured_import_screen(session, settings):
                 ">
                     <div style="display: flex; justify-content: space-between; align-items: start;">
                         <div style="flex: 1;">
-                            <div style="font-weight: 600; color: #1f2937; font-size: 1.1rem;">
+                            <div style="font-weight: 600; color: #c8cdd5; font-size: 1.1rem;">
                                 {row['description'][:50]}{'...' if len(row['description']) > 50 else ''}
                             </div>
-                            <div style="color: #6b7280; font-size: 0.875rem; margin-top: 0.5rem;">
-                                📅 {row['date'].strftime('%d %b %Y')} 
+                            <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem; margin-top: 0.5rem;">
+                                📅 {row['date'].strftime('%d %b %Y')}
                                 • Category: {row['guessed_category'] if row['guessed_category'] else 'None'}
                                 • Confidence: {row.get('confidence_score', 0):.0f}%
                             </div>
@@ -529,7 +535,7 @@ def render_restructured_import_screen(session, settings):
                             <div style="font-size: 1.5rem; font-weight: 700; color: {amount_color};">
                                 {'+ ' if is_income else '- '}{format_currency(amount)}
                             </div>
-                            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">
+                            <div style="font-size: 0.75rem; color: rgba(200, 205, 213, 0.38); margin-top: 0.25rem;">
                                 {row['guessed_type'] if row['guessed_type'] else 'Unknown'}
                             </div>
                         </div>
@@ -642,18 +648,19 @@ def render_restructured_import_screen(session, settings):
                             # Clear progress indicators
                             progress_bar.empty()
                             status_text.empty()
-                            
-                            # Success message with animation
-                            st.balloons()
+
+                            # Success toast
+                            show_toast(f"Imported {imported_count} transactions to {selected_account}", "success")
                             st.markdown(f"""
                             <div style="
-                                background: linear-gradient(135deg, #065f46 0%, #064e3b 100%);
-                                color: white;
+                                background: linear-gradient(135deg, rgba(54, 199, 160, 0.3) 0%, rgba(54, 199, 160, 0.2) 100%);
+                                color: #c8cdd5;
                                 border-radius: 20px;
                                 padding: 2rem;
                                 text-align: center;
                                 margin: 2rem 0;
                                 animation: success-pulse 0.6s ease;
+                                border: 1px solid rgba(54, 199, 160, 0.5);
                             ">
                                 <div style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
                                 <h2 style="margin: 0 0 0.5rem 0;">Import Complete!</h2>
@@ -670,35 +677,35 @@ def render_restructured_import_screen(session, settings):
                             with col1:
                                 st.markdown("""
                                 <div style="
-                                    background: white;
-                                    border: 2px solid #3b82f6;
+                                    background: rgba(18, 22, 31, 0.92);
+                                    border: 2px solid rgba(79, 143, 234, 0.5);
                                     border-radius: 16px;
                                     padding: 1.5rem;
                                     text-align: center;
                                 ">
                                     <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
-                                    <h4 style="color: #1e40af; margin: 0 0 0.5rem 0;">Review Transactions</h4>
-                                    <p style="color: #6b7280; font-size: 0.875rem;">
+                                    <h4 style="color: #4f8fea; margin: 0 0 0.5rem 0;">Review Transactions</h4>
+                                    <p style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem;">
                                         Review and categorize your imported transactions
                                     </p>
                                 </div>
                                 """, unsafe_allow_html=True)
                                 if st.button("Go to Review →", use_container_width=True):
-                                    st.session_state.navigate_to = "🔍 Final Review"
+                                    st.session_state.navigate_to = "Final Review"
                                     st.rerun()
-                            
+
                             with col2:
                                 st.markdown("""
                                 <div style="
-                                    background: white;
-                                    border: 2px solid #8b5cf6;
+                                    background: rgba(18, 22, 31, 0.92);
+                                    border: 2px solid rgba(236, 72, 153, 0.5);
                                     border-radius: 16px;
                                     padding: 1.5rem;
                                     text-align: center;
                                 ">
                                     <div style="font-size: 2rem; margin-bottom: 0.5rem;">📥</div>
-                                    <h4 style="color: #6b21a8; margin: 0 0 0.5rem 0;">Import More</h4>
-                                    <p style="color: #6b7280; font-size: 0.875rem;">
+                                    <h4 style="color: #ec4899; margin: 0 0 0.5rem 0;">Import More</h4>
+                                    <p style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem;">
                                         Upload another bank statement CSV file
                                     </p>
                                 </div>
@@ -725,43 +732,43 @@ def render_restructured_import_screen(session, settings):
         with col1:
             st.markdown("""
             <div style="
-                background: #f0f9ff;
-                border-left: 4px solid #3b82f6;
+                background: rgba(18, 22, 31, 0.92);
+                border-left: 4px solid rgba(79, 143, 234, 0.5);
                 border-radius: 8px;
                 padding: 1rem;
             ">
-                <h4 style="margin: 0 0 0.5rem 0; color: #1e40af;">📋 File Format</h4>
-                <p style="margin: 0; color: #64748b; font-size: 0.875rem;">
+                <h4 style="margin: 0 0 0.5rem 0; color: #4f8fea;">📋 File Format</h4>
+                <p style="margin: 0; color: rgba(200, 205, 213, 0.38); font-size: 0.875rem;">
                     Ensure your CSV contains Date, Description, and Amount columns
                 </p>
             </div>
             """, unsafe_allow_html=True)
-        
+
         with col2:
             st.markdown("""
             <div style="
-                background: #fef3c7;
-                border-left: 4px solid #f59e0b;
+                background: rgba(18, 22, 31, 0.92);
+                border-left: 4px solid rgba(229, 181, 103, 0.5);
                 border-radius: 8px;
                 padding: 1rem;
             ">
-                <h4 style="margin: 0 0 0.5rem 0; color: #92400e;">⚙️ Auto-Categorization</h4>
-                <p style="margin: 0; color: #78716c; font-size: 0.875rem;">
+                <h4 style="margin: 0 0 0.5rem 0; color: #e5b567;">⚙️ Auto-Categorization</h4>
+                <p style="margin: 0; color: rgba(200, 205, 213, 0.38); font-size: 0.875rem;">
                     Transactions will be automatically categorized based on your rules
                 </p>
             </div>
             """, unsafe_allow_html=True)
-        
+
         with col3:
             st.markdown("""
             <div style="
-                background: #f0fdf4;
-                border-left: 4px solid #10b981;
+                background: rgba(18, 22, 31, 0.92);
+                border-left: 4px solid rgba(54, 199, 160, 0.5);
                 border-radius: 8px;
                 padding: 1rem;
             ">
-                <h4 style="margin: 0 0 0.5rem 0; color: #064e3b;">✅ Review After Import</h4>
-                <p style="margin: 0; color: #4b5563; font-size: 0.875rem;">
+                <h4 style="margin: 0 0 0.5rem 0; color: #36c7a0;">✅ Review After Import</h4>
+                <p style="margin: 0; color: rgba(200, 205, 213, 0.38); font-size: 0.875rem;">
                     Check the Final Review page to verify all categorizations
                 </p>
             </div>

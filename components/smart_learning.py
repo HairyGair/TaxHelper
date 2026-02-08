@@ -80,7 +80,7 @@ def render_enhanced_modal(similar_info):
     st.markdown("""
     <style>
     .smart-learning-modal {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #3a6db8 100%);
         color: white;
         padding: 25px;
         border-radius: 15px;
@@ -106,7 +106,7 @@ def render_enhanced_modal(similar_info):
         st.markdown(f"""
         <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 10px; margin: 15px 0;">
             <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">
-                Found <span style="color: #ffd700;">{similar_info['count']} similar transactions</span>
+                Found <span style="color: #4f8fea;">{similar_info['count']} similar transactions</span>
             </div>
             <div style="font-size: 14px; opacity: 0.9;">
                 Merchant: <strong>"{similar_info['merchant']}"</strong>

@@ -36,12 +36,12 @@ def render_action_card(
         )
     """
     colors = {
-        "blue": "#007bff",
-        "green": "#28a745",
-        "orange": "#fd7e14",
-        "red": "#dc3545",
-        "purple": "#6f42c1",
-        "teal": "#20c997"
+        "blue": "#4f8fea",
+        "green": "#36c7a0",
+        "orange": "#e07a5f",
+        "red": "#e07a5f",
+        "purple": "#7aafff",
+        "teal": "#4f8fea"
     }
 
     border_color = colors.get(color, colors["blue"])
@@ -150,11 +150,11 @@ def render_hero_card(
     # Default gradient based on score
     if gradient_colors is None:
         if score >= 80:
-            gradient_colors = ("#2ecc71", "#27ae60")  # Green
+            gradient_colors = ("#36c7a0", "#36c7a0")  # Green
         elif score >= 50:
-            gradient_colors = ("#f39c12", "#e67e22")  # Orange
+            gradient_colors = ("#e5b567", "#e5b567")  # Orange
         else:
-            gradient_colors = ("#e74c3c", "#c0392b")  # Red
+            gradient_colors = ("#e07a5f", "#e07a5f")  # Red
 
     gradient = f"linear-gradient(135deg, {gradient_colors[0]} 0%, {gradient_colors[1]} 100%)"
 
@@ -254,9 +254,9 @@ def render_progress_card(
     percentage = (current / total * 100) if total > 0 else 0
 
     colors = {
-        "blue": "#007bff",
-        "green": "#28a745",
-        "orange": "#fd7e14"
+        "blue": "#4f8fea",
+        "green": "#36c7a0",
+        "orange": "#e07a5f"
     }
 
     progress_color = colors.get(color, colors["blue"])
@@ -318,10 +318,10 @@ def render_info_card(
             return
 
     colors = {
-        "info": {"bg": "#d1ecf1", "border": "#0c5460"},
-        "success": {"bg": "#d4edda", "border": "#155724"},
-        "warning": {"bg": "#fff3cd", "border": "#856404"},
-        "error": {"bg": "#f8d7da", "border": "#721c24"}
+        "info": {"bg": "rgba(122,175,255,0.15)", "border": "#7aafff"},
+        "success": {"bg": "rgba(54,199,160,0.15)", "border": "#36c7a0"},
+        "warning": {"bg": "rgba(229,181,103,0.15)", "border": "#e5b567"},
+        "error": {"bg": "rgba(224,122,95,0.15)", "border": "#e07a5f"}
     }
 
     # ARIA roles based on card type

@@ -12,19 +12,20 @@ def render_restructured_guidance_screen(session, settings):
     Render a completely restructured HMRC Guidance page with modern interface
     """
 
-    # Custom CSS for the guidance page - Modern purple/violet gradient and animations
+    # Custom CSS for the guidance page - Obsidian dark theme
     st.markdown("""
     <style>
     /* Guidance Page Specific Styling */
     .guidance-header {
-        background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
-        color: white;
+        background: linear-gradient(135deg, rgba(79, 143, 234, 0.15) 0%, rgba(79, 143, 234, 0.05) 100%);
+        color: #c8cdd5;
         padding: 3rem 2rem;
         border-radius: 24px;
         margin-bottom: 2rem;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 20px 60px rgba(147, 51, 234, 0.3);
+        box-shadow: 0 20px 60px rgba(79, 143, 234, 0.1);
+        border: 1px solid rgba(79, 143, 234, 0.12);
     }
 
     .guidance-header::before {
@@ -55,31 +56,31 @@ def render_restructured_guidance_screen(session, settings):
     }
 
     .status-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 16px;
         padding: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        border: 1px solid #f0f0f0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        border: 1px solid rgba(79, 143, 234, 0.12);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         height: 100%;
     }
 
     .status-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 30px rgba(147, 51, 234, 0.15);
+        box-shadow: 0 8px 30px rgba(79, 143, 234, 0.2);
     }
 
     .metric-value {
         font-size: 2.5rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #7aafff 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin: 0.5rem 0;
     }
 
     .metric-label {
-        color: #64748b;
+        color: rgba(200, 205, 213, 0.38);
         font-size: 0.875rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -88,20 +89,20 @@ def render_restructured_guidance_screen(session, settings):
     }
 
     .info-card {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 20px;
         padding: 2rem;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
         margin-bottom: 1.5rem;
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
-        border: 1px solid #f0f0f0;
+        border: 1px solid rgba(79, 143, 234, 0.12);
     }
 
     .info-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 15px 50px rgba(147, 51, 234, 0.15);
+        box-shadow: 0 15px 50px rgba(79, 143, 234, 0.2);
     }
 
     .info-card::before {
@@ -111,59 +112,64 @@ def render_restructured_guidance_screen(session, settings):
         left: 0;
         width: 6px;
         height: 100%;
-        background: linear-gradient(135deg, #9333ea 0%, #a855f7 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #7aafff 100%);
     }
 
     .section-title {
         font-size: 1.5rem;
         font-weight: 700;
-        color: #1f2937;
+        color: #c8cdd5;
         margin-bottom: 1rem;
     }
 
     .rule-card {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        background: rgba(79, 143, 234, 0.1);
         border-radius: 16px;
         padding: 1.5rem;
         margin: 1.5rem 0;
-        border-left: 6px solid #f59e0b;
+        border-left: 6px solid #4f8fea;
+        border: 1px solid rgba(79, 143, 234, 0.12);
     }
 
     .allowed-card {
-        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        background: rgba(54, 199, 160, 0.1);
         border-radius: 16px;
         padding: 1.5rem;
         margin: 1rem 0;
-        border-left: 6px solid #10b981;
+        border-left: 6px solid #36c7a0;
+        border: 1px solid rgba(54, 199, 160, 0.2);
     }
 
     .not-allowed-card {
-        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        background: rgba(224, 122, 95, 0.1);
         border-radius: 16px;
         padding: 1.5rem;
         margin: 1rem 0;
-        border-left: 6px solid #ef4444;
+        border-left: 6px solid #e07a5f;
+        border: 1px solid rgba(224, 122, 95, 0.2);
     }
 
     .partial-card {
-        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+        background: rgba(99, 102, 241, 0.1);
         border-radius: 16px;
         padding: 1.5rem;
         margin: 1rem 0;
         border-left: 6px solid #6366f1;
+        border: 1px solid rgba(99, 102, 241, 0.2);
     }
 
     .tax-rate-box {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 12px;
         padding: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         margin: 0.75rem 0;
-        border-left: 4px solid #9333ea;
+        border-left: 4px solid #4f8fea;
+        border: 1px solid rgba(79, 143, 234, 0.12);
     }
 
     .rate-label {
-        color: #64748b;
+        color: rgba(200, 205, 213, 0.38);
         font-size: 0.875rem;
         font-weight: 600;
         text-transform: uppercase;
@@ -173,59 +179,61 @@ def render_restructured_guidance_screen(session, settings):
     .rate-value {
         font-size: 2rem;
         font-weight: 800;
-        color: #9333ea;
+        color: #4f8fea;
         margin: 0.5rem 0;
     }
 
     .rate-details {
-        color: #1f2937;
+        color: rgba(200, 205, 213, 0.65);
         font-size: 0.95rem;
         margin-top: 0.5rem;
     }
 
     .warning-banner {
-        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-        border: 3px solid #ef4444;
+        background: rgba(224, 122, 95, 0.1);
+        border: 3px solid rgba(224, 122, 95, 0.4);
         border-radius: 16px;
         padding: 2rem;
         margin: 2rem 0;
     }
 
     .resource-link {
-        background: white;
+        background: rgba(18, 22, 31, 0.92);
         border-radius: 12px;
         padding: 1.25rem;
         margin: 0.75rem 0;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         transition: all 0.3s ease;
-        border-left: 4px solid #9333ea;
+        border-left: 4px solid #4f8fea;
+        border: 1px solid rgba(79, 143, 234, 0.12);
     }
 
     .resource-link:hover {
         transform: translateX(5px);
-        box-shadow: 0 4px 20px rgba(147, 51, 234, 0.2);
+        box-shadow: 0 4px 20px rgba(79, 143, 234, 0.3);
     }
 
     .deadline-card {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        background: rgba(79, 143, 234, 0.1);
         border-radius: 16px;
         padding: 1.5rem;
         margin: 1rem 0;
-        border: 2px solid #f59e0b;
+        border: 2px solid rgba(79, 143, 234, 0.4);
     }
 
     .contact-card {
-        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        background: rgba(59, 130, 246, 0.1);
         border-radius: 16px;
         padding: 1.5rem;
         margin: 1rem 0;
         text-align: center;
+        border: 1px solid rgba(59, 130, 246, 0.2);
     }
 
     .list-item {
         padding: 0.75rem 0;
-        border-bottom: 1px solid #f0f0f0;
-        color: #1f2937;
+        border-bottom: 1px solid rgba(79, 143, 234, 0.12);
+        color: rgba(200, 205, 213, 0.65);
     }
 
     .list-item:last-child {
@@ -255,15 +263,15 @@ def render_restructured_guidance_screen(session, settings):
 
     # Header Section with animation
     st.markdown("""
-    <div class="guidance-header">
+    <div class="ob-hero">
         <div style="position: relative; z-index: 1;">
-            <h1 style="margin: 0; font-size: 3rem; font-weight: 800;">
+            <h1 style="margin: 0; font-size: 3rem; font-weight: 800; color: #c8cdd5;">
                 📚 HMRC Guidance & Compliance
             </h1>
-            <p style="margin: 1rem 0 0 0; font-size: 1.2rem; opacity: 0.95;">
+            <p style="margin: 1rem 0 0 0; font-size: 1.2rem; opacity: 0.95; color: rgba(200, 205, 213, 0.8);">
                 Essential information about UK tax rules for self-employed individuals
             </p>
-            <p style="margin: 0.5rem 0 0 0; font-size: 1rem; opacity: 0.85;">
+            <p style="margin: 0.5rem 0 0 0; font-size: 1rem; opacity: 0.85; color: rgba(200, 205, 213, 0.65);">
                 Updated for Tax Year 2024/25
             </p>
         </div>
@@ -308,10 +316,10 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div class="rule-card">
-            <h4 style="margin: 0 0 1rem 0; color: #92400e;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                 📋 The "Wholly and Exclusively" Rule
             </h4>
-            <div style="color: #78350f; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <p style="margin: 0 0 0.75rem 0;">
                     For an expense to be allowable, it must be:
                 </p>
@@ -393,9 +401,9 @@ def render_restructured_guidance_screen(session, settings):
                     <p style="margin: 0 0 0.75rem 0;"><strong>Two methods available:</strong></p>
 
                     <p style="margin: 0.75rem 0 0 0;"><strong>1. Flat Rate (Simpler):</strong></p>
-                    <div style="background: white; padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
-                        <code style="color: #9333ea; font-size: 1.1rem; font-weight: 600;">£10/month</code>
-                        <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem;">No receipts needed</p>
+                    <div style="background: #181d28; padding: 1rem; border-radius: 8px; margin: 0.5rem 0; border: 1px solid rgba(79, 143, 234, 0.12);">
+                        <code style="color: #4f8fea; font-size: 1.1rem; font-weight: 600;">£10/month</code>
+                        <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: rgba(200, 205, 213, 0.65);">No receipts needed</p>
                     </div>
 
                     <p style="margin: 1rem 0 0 0;"><strong>2. Actual Costs (More Complex):</strong></p>
@@ -418,8 +426,8 @@ def render_restructured_guidance_screen(session, settings):
                     <p style="margin: 0 0 0.75rem 0;"><strong>Two methods available:</strong></p>
 
                     <p style="margin: 0.75rem 0 0 0;"><strong>1. Simplified Mileage (Recommended):</strong></p>
-                    <div style="background: white; padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
-                        <code style="color: #9333ea; font-size: 1rem; font-weight: 600;">
+                    <div style="background: #181d28; padding: 1rem; border-radius: 8px; margin: 0.5rem 0; border: 1px solid rgba(79, 143, 234, 0.12);">
+                        <code style="color: #4f8fea; font-size: 1rem; font-weight: 600;">
                             45p/mile (first 10,000)<br>
                             25p/mile (over 10,000)
                         </code>
@@ -440,83 +448,83 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #991b1b;">
+            <h4 style="margin: 0 0 1rem 0; color: #e07a5f;">
                 1️⃣ Personal Expenses as Business
             </h4>
-            <div style="color: #1f2937; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <p style="margin: 0 0 0.5rem 0;">
-                    <span style="color: #ef4444; font-weight: 700;">❌ WRONG:</span>
+                    <span style="color: #e07a5f; font-weight: 700;">❌ WRONG:</span>
                     Claiming supermarket shopping as business expense
                 </p>
                 <p style="margin: 0;">
-                    <span style="color: #10b981; font-weight: 700;">✅ RIGHT:</span>
+                    <span style="color: #36c7a0; font-weight: 700;">✅ RIGHT:</span>
                     Only claim if buying supplies for business (with receipts)
                 </p>
             </div>
         </div>
 
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #991b1b;">
+            <h4 style="margin: 0 0 1rem 0; color: #e07a5f;">
                 2️⃣ Commuting as Travel
             </h4>
-            <div style="color: #1f2937; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <p style="margin: 0 0 0.5rem 0;">
-                    <span style="color: #ef4444; font-weight: 700;">❌ WRONG:</span>
+                    <span style="color: #e07a5f; font-weight: 700;">❌ WRONG:</span>
                     Claiming daily travel to your office/workplace
                 </p>
                 <p style="margin: 0;">
-                    <span style="color: #10b981; font-weight: 700;">✅ RIGHT:</span>
+                    <span style="color: #36c7a0; font-weight: 700;">✅ RIGHT:</span>
                     Only claim travel to client sites, meetings, different locations
                 </p>
             </div>
         </div>
 
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #991b1b;">
+            <h4 style="margin: 0 0 1rem 0; color: #e07a5f;">
                 3️⃣ Mixed Personal/Business
             </h4>
-            <div style="color: #1f2937; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <p style="margin: 0 0 0.5rem 0;">
-                    <span style="color: #ef4444; font-weight: 700;">❌ WRONG:</span>
+                    <span style="color: #e07a5f; font-weight: 700;">❌ WRONG:</span>
                     Claiming 100% of home internet when used personally
                 </p>
                 <p style="margin: 0;">
-                    <span style="color: #10b981; font-weight: 700;">✅ RIGHT:</span>
+                    <span style="color: #36c7a0; font-weight: 700;">✅ RIGHT:</span>
                     Claim reasonable business proportion (e.g., 20-30%)
                 </p>
             </div>
         </div>
 
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #991b1b;">
+            <h4 style="margin: 0 0 1rem 0; color: #e07a5f;">
                 4️⃣ Entertainment Expenses
             </h4>
-            <div style="color: #1f2937; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <p style="margin: 0 0 0.5rem 0;">
-                    <span style="color: #ef4444; font-weight: 700;">❌ WRONG:</span>
+                    <span style="color: #e07a5f; font-weight: 700;">❌ WRONG:</span>
                     Claiming meals with clients, coffee meetings
                 </p>
                 <p style="margin: 0;">
-                    <span style="color: #10b981; font-weight: 700;">✅ RIGHT:</span>
+                    <span style="color: #36c7a0; font-weight: 700;">✅ RIGHT:</span>
                     Only overnight accommodation and meals (if away on business)
                 </p>
             </div>
         </div>
 
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #991b1b;">
+            <h4 style="margin: 0 0 1rem 0; color: #e07a5f;">
                 5️⃣ Capital Allowances vs Depreciation
             </h4>
-            <div style="color: #1f2937; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <p style="margin: 0 0 0.5rem 0;">
-                    <span style="color: #ef4444; font-weight: 700;">❌ WRONG:</span>
+                    <span style="color: #e07a5f; font-weight: 700;">❌ WRONG:</span>
                     Using "Depreciation" category
                 </p>
                 <p style="margin: 0 0 1rem 0;">
-                    <span style="color: #10b981; font-weight: 700;">✅ RIGHT:</span>
+                    <span style="color: #36c7a0; font-weight: 700;">✅ RIGHT:</span>
                     Use "Capital Allowances" for equipment purchases
                 </p>
-                <p style="margin: 0; padding: 1rem; background: #f0f4ff; border-radius: 8px;">
+                <p style="margin: 0; padding: 1rem; background: #181d28; border-radius: 8px; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>Note:</strong> HMRC uses Capital Allowances, not accounting depreciation.<br>
                     Annual Investment Allowance (AIA): £1,000,000 for equipment.
                 </p>
@@ -526,16 +534,17 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div style="
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-            border-left: 6px solid #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 6px solid #7aafff;
             padding: 1.5rem;
             border-radius: 12px;
             margin: 2rem 0;
+            border: 1px solid rgba(59, 130, 246, 0.2);
         ">
-            <h4 style="margin: 0 0 0.75rem 0; color: #1e40af;">
+            <h4 style="margin: 0 0 0.75rem 0; color: #7aafff;">
                 💡 Pro Tip
             </h4>
-            <p style="margin: 0; color: #1e3a8a; line-height: 1.8;">
+            <p style="margin: 0; color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <strong>When in doubt, DON'T claim it.</strong> HMRC can investigate and charge penalties
                 for incorrect claims. It's better to miss a small deduction than face an investigation.
             </p>
@@ -551,10 +560,10 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div class="rule-card">
-            <h4 style="margin: 0 0 1rem 0; color: #92400e;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                 📋 All Income Must Be Declared
             </h4>
-            <div style="color: #78350f; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <p style="margin: 0 0 0.75rem 0;">
                     When you're self-employed, you must declare <strong>all income</strong> received during the tax year,
                     regardless of whether tax has already been deducted.
@@ -571,14 +580,14 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                 💼 Self-Employment Income
             </h4>
-            <div style="color: #1f2937; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <p style="margin: 0 0 0.75rem 0;">
                     Income from your business activities as a sole trader or freelancer.
                 </p>
-                <p style="margin: 0; padding: 1rem; background: #f0f4ff; border-radius: 8px; font-size: 0.95rem;">
+                <p style="margin: 0; padding: 1rem; background: #181d28; border-radius: 8px; font-size: 0.95rem; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>Examples:</strong><br>
                     • Invoices to clients<br>
                     • Sales revenue<br>
@@ -589,14 +598,14 @@ def render_restructured_guidance_screen(session, settings):
         </div>
 
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                 🏗️ CIS (Construction Industry Scheme)
             </h4>
-            <div style="color: #1f2937; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <p style="margin: 0 0 0.75rem 0;">
                     Payments received under the Construction Industry Scheme where tax has been deducted at source.
                 </p>
-                <p style="margin: 0; padding: 1rem; background: #fef3c7; border-radius: 8px; font-size: 0.95rem;">
+                <p style="margin: 0; padding: 1rem; background: rgba(79, 143, 234, 0.1); border-radius: 8px; font-size: 0.95rem; border: 1px solid rgba(79, 143, 234, 0.3);">
                     <strong>Important:</strong> CIS tax deducted can be offset against your final tax bill.
                     Always keep your CIS payment and deduction statements.
                 </p>
@@ -604,14 +613,14 @@ def render_restructured_guidance_screen(session, settings):
         </div>
 
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                 💰 PAYE Employment Income
             </h4>
-            <div style="color: #1f2937; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <p style="margin: 0 0 0.75rem 0;">
                     Salary or wages from employed positions where tax is deducted through Pay As You Earn.
                 </p>
-                <p style="margin: 0; padding: 1rem; background: #f0f4ff; border-radius: 8px; font-size: 0.95rem;">
+                <p style="margin: 0; padding: 1rem; background: #181d28; border-radius: 8px; font-size: 0.95rem; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>Note:</strong> If you're both employed and self-employed, you'll need to declare both.
                     Your P60 shows your PAYE income.
                 </p>
@@ -619,14 +628,14 @@ def render_restructured_guidance_screen(session, settings):
         </div>
 
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                 🏠 Property/Rental Income
             </h4>
-            <div style="color: #1f2937; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <p style="margin: 0 0 0.75rem 0;">
                     Income from renting out property (residential or commercial).
                 </p>
-                <p style="margin: 0; padding: 1rem; background: #f0f4ff; border-radius: 8px; font-size: 0.95rem;">
+                <p style="margin: 0; padding: 1rem; background: #181d28; border-radius: 8px; font-size: 0.95rem; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>Allowable Deductions:</strong><br>
                     • Mortgage interest<br>
                     • Repairs and maintenance<br>
@@ -637,14 +646,14 @@ def render_restructured_guidance_screen(session, settings):
         </div>
 
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                 📈 Dividend Income
             </h4>
-            <div style="color: #1f2937; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <p style="margin: 0 0 0.75rem 0;">
                     Dividends received from company shares you own.
                 </p>
-                <p style="margin: 0; padding: 1rem; background: #d1fae5; border-radius: 8px; font-size: 0.95rem;">
+                <p style="margin: 0; padding: 1rem; background: rgba(54, 199, 160, 0.1); border-radius: 8px; font-size: 0.95rem; border: 1px solid rgba(54, 199, 160, 0.2);">
                     <strong>Tax-Free Allowance:</strong> First £500 of dividend income is tax-free for higher rate taxpayers
                     (£1,000 for basic rate).
                 </p>
@@ -652,14 +661,14 @@ def render_restructured_guidance_screen(session, settings):
         </div>
 
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                 💵 Other Income
             </h4>
-            <div style="color: #1f2937; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <p style="margin: 0 0 0.75rem 0;">
                     Any other taxable income not covered by the above categories.
                 </p>
-                <p style="margin: 0; padding: 1rem; background: #f0f4ff; border-radius: 8px; font-size: 0.95rem;">
+                <p style="margin: 0; padding: 1rem; background: #181d28; border-radius: 8px; font-size: 0.95rem; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>Examples:</strong><br>
                     • Bank interest<br>
                     • Foreign income<br>
@@ -672,16 +681,17 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div style="
-            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-            border-left: 6px solid #ef4444;
+            background: rgba(224, 122, 95, 0.1);
+            border-left: 6px solid #e07a5f;
             padding: 1.5rem;
             border-radius: 12px;
             margin: 2rem 0;
+            border: 1px solid rgba(224, 122, 95, 0.2);
         ">
-            <h4 style="margin: 0 0 0.75rem 0; color: #991b1b;">
+            <h4 style="margin: 0 0 0.75rem 0; color: #e07a5f;">
                 ⚠️ Don't Forget Tax Deducted
             </h4>
-            <p style="margin: 0; color: #7f1d1d; line-height: 1.8;">
+            <p style="margin: 0; color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 Even if tax has been deducted from your income (CIS, PAYE, etc.), you must still
                 <strong>declare the gross amount</strong> on your Self Assessment. The tax already paid
                 will be credited against your final tax bill.
@@ -698,20 +708,20 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div class="deadline-card">
-            <h3 style="margin: 0 0 1rem 0; color: #92400e; text-align: center;">
+            <h3 style="margin: 0 0 1rem 0; color: #4f8fea; text-align: center;">
                 ⏰ Keep Records for 5 YEARS
             </h3>
-            <div style="color: #78350f; line-height: 1.8; text-align: center;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8; text-align: center;">
                 <p style="margin: 0 0 1rem 0; font-size: 1.1rem;">
                     From the <strong>31 January submission deadline</strong>
                 </p>
-                <div style="background: white; padding: 1.5rem; border-radius: 12px; margin: 1rem 0;">
-                    <p style="margin: 0 0 0.5rem 0; color: #64748b; font-size: 0.875rem;">Example:</p>
-                    <p style="margin: 0; color: #1f2937; font-size: 1.1rem;">
+                <div style="background: #181d28; padding: 1.5rem; border-radius: 12px; margin: 1rem 0; border: 1px solid rgba(79, 143, 234, 0.12);">
+                    <p style="margin: 0 0 0.5rem 0; color: rgba(200, 205, 213, 0.38); font-size: 0.875rem;">Example:</p>
+                    <p style="margin: 0; color: #c8cdd5; font-size: 1.1rem;">
                         2024/25 return submitted by <strong>31 Jan 2026</strong>
                     </p>
-                    <p style="margin: 0.5rem 0 0 0; color: #1f2937; font-size: 1.1rem;">
-                        Keep records until <strong style="color: #f59e0b;">31 Jan 2031</strong>
+                    <p style="margin: 0.5rem 0 0 0; color: #c8cdd5; font-size: 1.1rem;">
+                        Keep records until <strong style="color: #4f8fea;">31 Jan 2031</strong>
                     </p>
                 </div>
             </div>
@@ -766,22 +776,22 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                 📱 Digital Records Are Accepted
             </h4>
-            <div style="color: #1f2937; line-height: 1.8;">
-                <div style="background: #d1fae5; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
-                    <strong style="color: #065f46;">✅ HMRC Accepts:</strong>
-                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: #047857;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
+                <div style="background: rgba(54, 199, 160, 0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0; border: 1px solid rgba(54, 199, 160, 0.2);">
+                    <strong style="color: #36c7a0;">✅ HMRC Accepts:</strong>
+                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: rgba(200, 205, 213, 0.65);">
                         <li>Electronic receipts (emails, PDFs)</li>
                         <li>Photos of receipts</li>
                         <li>Scanned copies</li>
                         <li>Digital records in accounting software</li>
                     </ul>
                 </div>
-                <div style="background: #fef3c7; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
-                    <strong style="color: #92400e;">⚠️ Best Practices:</strong>
-                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: #78350f;">
+                <div style="background: rgba(79, 143, 234, 0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0; border: 1px solid rgba(79, 143, 234, 0.3);">
+                    <strong style="color: #4f8fea;">⚠️ Best Practices:</strong>
+                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: rgba(200, 205, 213, 0.65);">
                         <li>Expenses >£100 - strongly recommend keeping receipts</li>
                         <li>Mileage - must keep detailed log (date, from, to, miles, purpose)</li>
                         <li>Store digital copies in organized folders</li>
@@ -800,10 +810,10 @@ def render_restructured_guidance_screen(session, settings):
         with col1:
             st.markdown("""
             <div class="status-card">
-                <h4 style="margin: 0 0 1rem 0; color: #9333ea;">
+                <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                     📎 Built-in Tools
                 </h4>
-                <div style="color: #1f2937; line-height: 1.8;">
+                <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                     <div class="list-item">• Add receipt links to expense records</div>
                     <div class="list-item">• Categorize all transactions</div>
                     <div class="list-item">• Track mileage with allowance calculation</div>
@@ -815,10 +825,10 @@ def render_restructured_guidance_screen(session, settings):
         with col2:
             st.markdown("""
             <div class="status-card">
-                <h4 style="margin: 0 0 1rem 0; color: #9333ea;">
+                <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                     💾 Export & Backup
                 </h4>
-                <div style="color: #1f2937; line-height: 1.8;">
+                <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                     <div class="list-item">• Export all records to Excel</div>
                     <div class="list-item">• Keep database file as backup</div>
                     <div class="list-item">• Generate HMRC-ready summaries</div>
@@ -829,16 +839,17 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div style="
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-            border-left: 6px solid #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 6px solid #7aafff;
             padding: 1.5rem;
             border-radius: 12px;
             margin: 2rem 0;
+            border: 1px solid rgba(59, 130, 246, 0.2);
         ">
-            <h4 style="margin: 0 0 0.75rem 0; color: #1e40af;">
+            <h4 style="margin: 0 0 0.75rem 0; color: #7aafff;">
                 💡 Tax Helper Recommendation
             </h4>
-            <p style="margin: 0; color: #1e3a8a; line-height: 1.8;">
+            <p style="margin: 0; color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <strong>Regular backups are essential!</strong> We recommend:<br><br>
                 • Monthly backup of your Tax Helper database<br>
                 • Store receipt photos/PDFs in cloud storage (Google Drive, Dropbox)<br>
@@ -857,16 +868,17 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div style="
-            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-            border-left: 6px solid #10b981;
+            background: rgba(54, 199, 160, 0.1);
+            border-left: 6px solid #36c7a0;
             padding: 1.5rem;
             border-radius: 12px;
             margin: 1.5rem 0;
+            border: 1px solid rgba(54, 199, 160, 0.2);
         ">
-            <h4 style="margin: 0 0 0.75rem 0; color: #065f46;">
+            <h4 style="margin: 0 0 0.75rem 0; color: #36c7a0;">
                 ✓ Tax Helper Uses Official HMRC Rates
             </h4>
-            <p style="margin: 0; color: #047857; line-height: 1.8;">
+            <p style="margin: 0; color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 All tax calculations in this app use the verified rates below, updated for the 2024/25 tax year.
             </p>
         </div>
@@ -921,15 +933,15 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div class="rule-card">
-            <h4 style="margin: 0 0 1rem 0; color: #92400e;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                 📉 Personal Allowance Taper
             </h4>
-            <div style="color: #78350f; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <p style="margin: 0;">
                     If your income exceeds <strong>£100,000</strong>, your Personal Allowance is reduced by
                     <strong>£1 for every £2</strong> you earn over this limit.
                 </p>
-                <p style="margin: 1rem 0 0 0; padding: 1rem; background: white; border-radius: 8px;">
+                <p style="margin: 1rem 0 0 0; padding: 1rem; background: #181d28; border-radius: 8px; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>Example:</strong> If you earn £110,000, your Personal Allowance is reduced by £5,000
                     (half of £10,000 over the limit), giving you a Personal Allowance of £7,570.
                 </p>
@@ -942,24 +954,24 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                 Class 2 National Insurance
             </h4>
-            <div style="color: #1f2937; line-height: 1.8;">
-                <div style="background: #f0f4ff; padding: 1.5rem; border-radius: 12px; margin: 1rem 0;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
+                <div style="background: #181d28; padding: 1.5rem; border-radius: 12px; margin: 1rem 0; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <div style="text-align: center;">
-                        <div style="font-size: 2.5rem; font-weight: 800; color: #9333ea; margin-bottom: 0.5rem;">
+                        <div style="font-size: 2.5rem; font-weight: 800; color: #4f8fea; margin-bottom: 0.5rem;">
                             £3.45
                         </div>
-                        <div style="color: #64748b; font-size: 0.875rem; font-weight: 600;">
+                        <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem; font-weight: 600;">
                             PER WEEK
                         </div>
                     </div>
-                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #cbd5e1;">
-                        <p style="margin: 0; color: #1f2937;">
+                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(79, 143, 234, 0.12);">
+                        <p style="margin: 0; color: #c8cdd5;">
                             <strong>Annual Total:</strong> £179.40 per year
                         </p>
-                        <p style="margin: 0.5rem 0 0 0; color: #64748b; font-size: 0.95rem;">
+                        <p style="margin: 0.5rem 0 0 0; color: rgba(200, 205, 213, 0.38); font-size: 0.95rem;">
                             Only payable if profits exceed £6,725 per year
                         </p>
                     </div>
@@ -970,30 +982,30 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div class="info-card">
-            <h4 style="margin: 0 0 1rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                 Class 4 National Insurance
             </h4>
-            <div style="color: #1f2937; line-height: 1.8;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0;">
-                    <div style="background: #f0f4ff; padding: 1.5rem; border-radius: 12px; text-align: center;">
-                        <div style="font-size: 2.5rem; font-weight: 800; color: #9333ea; margin-bottom: 0.5rem;">
+                    <div style="background: #181d28; padding: 1.5rem; border-radius: 12px; text-align: center; border: 1px solid rgba(79, 143, 234, 0.12);">
+                        <div style="font-size: 2.5rem; font-weight: 800; color: #4f8fea; margin-bottom: 0.5rem;">
                             6%
                         </div>
-                        <div style="color: #64748b; font-size: 0.875rem; font-weight: 600;">
+                        <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem; font-weight: 600;">
                             ON PROFITS BETWEEN
                         </div>
-                        <div style="color: #1f2937; font-size: 1rem; margin-top: 0.5rem;">
+                        <div style="color: #c8cdd5; font-size: 1rem; margin-top: 0.5rem;">
                             £12,570 - £50,270
                         </div>
                     </div>
-                    <div style="background: #f0f4ff; padding: 1.5rem; border-radius: 12px; text-align: center;">
-                        <div style="font-size: 2.5rem; font-weight: 800; color: #9333ea; margin-bottom: 0.5rem;">
+                    <div style="background: #181d28; padding: 1.5rem; border-radius: 12px; text-align: center; border: 1px solid rgba(79, 143, 234, 0.12);">
+                        <div style="font-size: 2.5rem; font-weight: 800; color: #4f8fea; margin-bottom: 0.5rem;">
                             2%
                         </div>
-                        <div style="color: #64748b; font-size: 0.875rem; font-weight: 600;">
+                        <div style="color: rgba(200, 205, 213, 0.38); font-size: 0.875rem; font-weight: 600;">
                             ON PROFITS ABOVE
                         </div>
-                        <div style="color: #1f2937; font-size: 1rem; margin-top: 0.5rem;">
+                        <div style="color: #c8cdd5; font-size: 1rem; margin-top: 0.5rem;">
                             £50,270
                         </div>
                     </div>
@@ -1007,16 +1019,17 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div style="
-            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-            border-left: 6px solid #10b981;
+            background: rgba(54, 199, 160, 0.1);
+            border-left: 6px solid #36c7a0;
             padding: 1.5rem;
             border-radius: 12px;
             margin: 1.5rem 0;
+            border: 1px solid rgba(54, 199, 160, 0.2);
         ">
-            <h4 style="margin: 0 0 0.75rem 0; color: #065f46;">
+            <h4 style="margin: 0 0 0.75rem 0; color: #36c7a0;">
                 🧮 Automatic Tax Calculation
             </h4>
-            <p style="margin: 0; color: #047857; line-height: 1.8;">
+            <p style="margin: 0; color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                 Tax Helper automatically calculates your estimated tax liability on the Dashboard page.<br><br>
                 The calculation uses the exact HMRC rates shown above and is verified against official guidance.<br><br>
                 <strong>Formula:</strong> Net Profit = Gross Income - Allowable Expenses - Mileage Allowances
@@ -1059,85 +1072,85 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div class="resource-link">
-            <h4 style="margin: 0 0 0.5rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 0.5rem 0; color: #4f8fea;">
                 📄 SA103 Self-Employment Form
             </h4>
-            <p style="margin: 0 0 0.75rem 0; color: #64748b; font-size: 0.95rem;">
+            <p style="margin: 0 0 0.75rem 0; color: rgba(200, 205, 213, 0.38); font-size: 0.95rem;">
                 The official form for reporting self-employment income and expenses
             </p>
             <a href="https://www.gov.uk/self-assessment-forms-and-helpsheets"
                target="_blank"
-               style="color: #9333ea; font-weight: 600; text-decoration: none;">
+               style="color: #4f8fea; font-weight: 600; text-decoration: none;">
                 Visit gov.uk/self-assessment-forms →
             </a>
         </div>
 
         <div class="resource-link">
-            <h4 style="margin: 0 0 0.5rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 0.5rem 0; color: #4f8fea;">
                 ✅ Allowable Expenses Guide
             </h4>
-            <p style="margin: 0 0 0.75rem 0; color: #64748b; font-size: 0.95rem;">
+            <p style="margin: 0 0 0.75rem 0; color: rgba(200, 205, 213, 0.38); font-size: 0.95rem;">
                 Complete list of what you can and cannot claim as business expenses
             </p>
             <a href="https://www.gov.uk/expenses-if-youre-self-employed"
                target="_blank"
-               style="color: #9333ea; font-weight: 600; text-decoration: none;">
+               style="color: #4f8fea; font-weight: 600; text-decoration: none;">
                 Visit gov.uk/expenses-if-youre-self-employed →
             </a>
         </div>
 
         <div class="resource-link">
-            <h4 style="margin: 0 0 0.5rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 0.5rem 0; color: #4f8fea;">
                 🏠 Simplified Expenses
             </h4>
-            <p style="margin: 0 0 0.75rem 0; color: #64748b; font-size: 0.95rem;">
+            <p style="margin: 0 0 0.75rem 0; color: rgba(200, 205, 213, 0.38); font-size: 0.95rem;">
                 Information about using flat rate allowances for home office and vehicles
             </p>
             <a href="https://www.gov.uk/simpler-income-tax-simplified-expenses"
                target="_blank"
-               style="color: #9333ea; font-weight: 600; text-decoration: none;">
+               style="color: #4f8fea; font-weight: 600; text-decoration: none;">
                 Visit gov.uk/simpler-income-tax-simplified-expenses →
             </a>
         </div>
 
         <div class="resource-link">
-            <h4 style="margin: 0 0 0.5rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 0.5rem 0; color: #4f8fea;">
                 💻 Capital Allowances
             </h4>
-            <p style="margin: 0 0 0.75rem 0; color: #64748b; font-size: 0.95rem;">
+            <p style="margin: 0 0 0.75rem 0; color: rgba(200, 205, 213, 0.38); font-size: 0.95rem;">
                 How to claim for equipment, machinery, and business vehicles
             </p>
             <a href="https://www.gov.uk/capital-allowances"
                target="_blank"
-               style="color: #9333ea; font-weight: 600; text-decoration: none;">
+               style="color: #4f8fea; font-weight: 600; text-decoration: none;">
                 Visit gov.uk/capital-allowances →
             </a>
         </div>
 
         <div class="resource-link">
-            <h4 style="margin: 0 0 0.5rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 0.5rem 0; color: #4f8fea;">
                 📑 Record Keeping Requirements
             </h4>
-            <p style="margin: 0 0 0.75rem 0; color: #64748b; font-size: 0.95rem;">
+            <p style="margin: 0 0 0.75rem 0; color: rgba(200, 205, 213, 0.38); font-size: 0.95rem;">
                 What records you must keep and for how long
             </p>
             <a href="https://www.gov.uk/self-employed-records"
                target="_blank"
-               style="color: #9333ea; font-weight: 600; text-decoration: none;">
+               style="color: #4f8fea; font-weight: 600; text-decoration: none;">
                 Visit gov.uk/self-employed-records →
             </a>
         </div>
 
         <div class="resource-link">
-            <h4 style="margin: 0 0 0.5rem 0; color: #9333ea;">
+            <h4 style="margin: 0 0 0.5rem 0; color: #4f8fea;">
                 📅 Self Assessment Deadlines
             </h4>
-            <p style="margin: 0 0 0.75rem 0; color: #64748b; font-size: 0.95rem;">
+            <p style="margin: 0 0 0.75rem 0; color: rgba(200, 205, 213, 0.38); font-size: 0.95rem;">
                 Important dates for registration, filing, and payment
             </p>
             <a href="https://www.gov.uk/self-assessment-tax-returns/deadlines"
                target="_blank"
-               style="color: #9333ea; font-weight: 600; text-decoration: none;">
+               style="color: #4f8fea; font-weight: 600; text-decoration: none;">
                 Visit gov.uk/self-assessment-tax-returns/deadlines →
             </a>
         </div>
@@ -1152,11 +1165,11 @@ def render_restructured_guidance_screen(session, settings):
             st.markdown("""
             <div class="contact-card">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">📞</div>
-                <h4 style="margin: 0 0 0.75rem 0; color: #1e40af;">
+                <h4 style="margin: 0 0 0.75rem 0; color: #7aafff;">
                     Self Assessment Helpline
                 </h4>
-                <div style="color: #1e3a8a; line-height: 1.8;">
-                    <div style="font-size: 1.75rem; font-weight: 800; margin: 1rem 0;">
+                <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
+                    <div style="font-size: 1.75rem; font-weight: 800; margin: 1rem 0; color: #c8cdd5;">
                         0300 200 3310
                     </div>
                     <p style="margin: 0.5rem 0 0 0; font-size: 0.95rem;">
@@ -1172,10 +1185,10 @@ def render_restructured_guidance_screen(session, settings):
             st.markdown("""
             <div class="contact-card">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">📱</div>
-                <h4 style="margin: 0 0 0.75rem 0; color: #1e40af;">
+                <h4 style="margin: 0 0 0.75rem 0; color: #7aafff;">
                     HMRC Mobile App
                 </h4>
-                <div style="color: #1e3a8a; line-height: 1.8;">
+                <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
                     <p style="margin: 0; font-size: 0.95rem;">
                         <strong>Download from:</strong><br>
                         • Apple App Store<br>
@@ -1193,26 +1206,26 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div class="deadline-card">
-            <h4 style="margin: 0 0 1.5rem 0; color: #92400e; text-align: center;">
+            <h4 style="margin: 0 0 1.5rem 0; color: #4f8fea; text-align: center;">
                 🗓️ Key Deadlines
             </h4>
-            <div style="color: #78350f; line-height: 2;">
-                <div style="background: white; padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 2;">
+                <div style="background: #181d28; padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>6 April 2024</strong> - Tax year 2024/25 starts
                 </div>
-                <div style="background: white; padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0;">
+                <div style="background: #181d28; padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>5 October 2024</strong> - Register for Self Assessment (if new)
                 </div>
-                <div style="background: white; padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0;">
+                <div style="background: #181d28; padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>31 October 2024</strong> - Paper return deadline
                 </div>
-                <div style="background: white; padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0;">
+                <div style="background: #181d28; padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>31 January 2025</strong> - ⚠️ Online return deadline + payment due
                 </div>
-                <div style="background: white; padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0;">
+                <div style="background: #181d28; padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>5 April 2025</strong> - Tax year 2024/25 ends
                 </div>
-                <div style="background: white; padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0;">
+                <div style="background: #181d28; padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>31 July 2025</strong> - Second payment on account due
                 </div>
             </div>
@@ -1221,23 +1234,23 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div class="warning-banner">
-            <h3 style="margin: 0 0 1rem 0; color: #991b1b;">
+            <h3 style="margin: 0 0 1rem 0; color: #e07a5f;">
                 💸 Late Filing Penalties
             </h3>
-            <div style="color: #7f1d1d; line-height: 1.8;">
-                <div style="background: white; padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
+            <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8;">
+                <div style="background: #181d28; padding: 1rem; border-radius: 8px; margin: 0.5rem 0; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>1 day late:</strong> £100 fine (even if no tax to pay)
                 </div>
-                <div style="background: white; padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
+                <div style="background: #181d28; padding: 1rem; border-radius: 8px; margin: 0.5rem 0; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>3 months late:</strong> Additional £10/day (max £900)
                 </div>
-                <div style="background: white; padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
+                <div style="background: #181d28; padding: 1rem; border-radius: 8px; margin: 0.5rem 0; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>6 months late:</strong> Additional £300 or 5% of tax due (whichever is higher)
                 </div>
-                <div style="background: white; padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
+                <div style="background: #181d28; padding: 1rem; border-radius: 8px; margin: 0.5rem 0; border: 1px solid rgba(79, 143, 234, 0.12);">
                     <strong>12 months late:</strong> Additional £300 or 5% of tax due (whichever is higher)
                 </div>
-                <p style="margin: 1.5rem 0 0 0; padding: 1rem; background: #fee2e2; border-radius: 8px;">
+                <p style="margin: 1.5rem 0 0 0; padding: 1rem; background: rgba(224, 122, 95, 0.15); border-radius: 8px; border: 1px solid rgba(224, 122, 95, 0.3);">
                     <strong>Plus:</strong> Interest charges on unpaid tax and potential investigation penalties
                 </p>
             </div>
@@ -1251,11 +1264,11 @@ def render_restructured_guidance_screen(session, settings):
 
         with col1:
             st.markdown("""
-            <div class="status-card" style="border-left: 4px solid #10b981;">
-                <h4 style="margin: 0 0 1rem 0; color: #065f46;">
+            <div class="status-card" style="border-left: 4px solid #36c7a0;">
+                <h4 style="margin: 0 0 1rem 0; color: #36c7a0;">
                     ✅ Verified Correct
                 </h4>
-                <div style="color: #1f2937; line-height: 1.8; font-size: 0.95rem;">
+                <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8; font-size: 0.95rem;">
                     <div class="list-item">• Tax rates 2024/25</div>
                     <div class="list-item">• NI calculations</div>
                     <div class="list-item">• Personal allowance</div>
@@ -1268,11 +1281,11 @@ def render_restructured_guidance_screen(session, settings):
 
         with col2:
             st.markdown("""
-            <div class="status-card" style="border-left: 4px solid #3b82f6;">
-                <h4 style="margin: 0 0 1rem 0; color: #1e40af;">
+            <div class="status-card" style="border-left: 4px solid #7aafff;">
+                <h4 style="margin: 0 0 1rem 0; color: #7aafff;">
                     📋 Your Responsibility
                 </h4>
-                <div style="color: #1f2937; line-height: 1.8; font-size: 0.95rem;">
+                <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8; font-size: 0.95rem;">
                     <div class="list-item">• Ensure expenses allowable</div>
                     <div class="list-item">• Keep receipts 5 years</div>
                     <div class="list-item">• Verify tax estimate</div>
@@ -1285,11 +1298,11 @@ def render_restructured_guidance_screen(session, settings):
 
         with col3:
             st.markdown("""
-            <div class="status-card" style="border-left: 4px solid #f59e0b;">
-                <h4 style="margin: 0 0 1rem 0; color: #92400e;">
+            <div class="status-card" style="border-left: 4px solid #4f8fea;">
+                <h4 style="margin: 0 0 1rem 0; color: #4f8fea;">
                     ⚠️ Seek Advice For
                 </h4>
-                <div style="color: #1f2937; line-height: 1.8; font-size: 0.95rem;">
+                <div style="color: rgba(200, 205, 213, 0.65); line-height: 1.8; font-size: 0.95rem;">
                     <div class="list-item">• Complex tax situations</div>
                     <div class="list-item">• Multiple income sources</div>
                     <div class="list-item">• Property income</div>
@@ -1302,17 +1315,18 @@ def render_restructured_guidance_screen(session, settings):
 
         st.markdown("""
         <div style="
-            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-            border-left: 6px solid #10b981;
+            background: rgba(54, 199, 160, 0.1);
+            border-left: 6px solid #36c7a0;
             padding: 2rem;
             border-radius: 16px;
             margin: 2rem 0;
             text-align: center;
+            border: 1px solid rgba(54, 199, 160, 0.2);
         ">
-            <h3 style="margin: 0 0 1rem 0; color: #065f46;">
+            <h3 style="margin: 0 0 1rem 0; color: #36c7a0;">
                 🎯 Tax Helper Mission
             </h3>
-            <p style="margin: 0; color: #047857; line-height: 1.8; font-size: 1.1rem;">
+            <p style="margin: 0; color: rgba(200, 205, 213, 0.65); line-height: 1.8; font-size: 1.1rem;">
                 Tax Helper is designed to help you organize your financial records accurately and efficiently.<br><br>
                 By keeping thorough records throughout the year, you'll make tax time stress-free and ensure
                 you claim all allowable deductions while staying fully compliant with HMRC rules.<br><br>

@@ -1,6 +1,6 @@
 """
-Restructured Dashboard with Modern Interface Design
-Maintains all functionality with a completely new visual approach
+Dashboard — Meridian Design System
+Luxury fintech dashboard for UK Self Assessment Tax Helper
 """
 
 import streamlit as st
@@ -11,288 +11,189 @@ import plotly.graph_objects as go
 import plotly.express as px
 from models import Transaction, Income, Expense, Mileage, Donation
 from utils import format_currency, get_tax_year_dates
+from components.ui.theme import OBSIDIAN, plotly_obsidian_layout
+
 
 def render_restructured_dashboard(session, settings):
-    """
-    Render a completely restructured dashboard with modern interface
-    """
-    
-    # Custom CSS for the new dashboard design
-    st.markdown("""
-    <style>
-    /* Modern Dashboard Styling */
-    .main-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 20px;
-        margin-bottom: 2rem;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-    }
-    
-    .status-card {
-        background: white;
-        border-radius: 16px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        border: 1px solid #f0f0f0;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    
-    .status-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-    }
-    
-    .metric-value {
-        font-size: 2.5rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin: 0;
-    }
-    
-    .metric-label {
-        color: #64748b;
-        font-size: 0.875rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.5rem;
-    }
-    
-    .quick-action-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin: 2rem 0;
-    }
-    
-    .quick-action-btn {
-        background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
-        border: 2px solid #e0e7ff;
-        border-radius: 12px;
-        padding: 1.25rem;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-    
-    .quick-action-btn:hover {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        transform: scale(1.05);
-    }
-    
-    .activity-feed {
-        background: #f8fafc;
-        border-radius: 16px;
-        padding: 1.5rem;
-        max-height: 400px;
-        overflow-y: auto;
-    }
-    
-    .activity-item {
-        background: white;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 0.75rem;
-        border-left: 4px solid #667eea;
-    }
-    
-    .progress-ring {
-        position: relative;
-        width: 120px;
-        height: 120px;
-    }
-    
-    .insight-card {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        border: 1px solid #fbbf24;
-        border-radius: 12px;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-    
-    .insight-icon {
-        font-size: 1.5rem;
-        margin-right: 0.75rem;
-    }
-    
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Get tax year from settings
+    """Render premium Meridian dashboard."""
+
     tax_year = settings.get('tax_year', '2024/25')
     start_date, end_date = get_tax_year_dates(tax_year)
-    
-    # ============================================================================
-    # MAIN HEADER SECTION
-    # ============================================================================
-    st.markdown("""
-    <div class="main-header">
-        <h1 style="margin: 0; font-size: 2.5rem; font-weight: 800;">
-            Tax Dashboard
-        </h1>
-        <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 1.1rem;">
-            Complete overview of your tax position for {tax_year}
-        </p>
-    </div>
-    """.format(tax_year=tax_year), unsafe_allow_html=True)
-    
-    # ============================================================================
-    # TOP METRICS ROW - Key Performance Indicators
-    # ============================================================================
-    
-    # Calculate key metrics
+
+    # ── Data queries ────────────────────────────────────────────────────
     total_income = session.query(func.sum(Income.amount_gross)).filter(
         and_(Income.date >= start_date, Income.date <= end_date)
     ).scalar() or 0.0
-    
+
     total_expenses = session.query(func.sum(Expense.amount)).filter(
         and_(Expense.date >= start_date, Expense.date <= end_date)
     ).scalar() or 0.0
-    
+
     total_mileage = session.query(func.sum(Mileage.allowable_amount)).filter(
         and_(Mileage.date >= start_date, Mileage.date <= end_date)
     ).scalar() or 0.0
-    
+
     net_profit = total_income - total_expenses - total_mileage
-    
-    # Estimate tax (simplified)
+
+    # Tax estimate
     if net_profit > 50270:
-        estimated_tax = 12570 * 0 + (50270 - 12570) * 0.20 + (net_profit - 50270) * 0.40
+        estimated_tax = (50270 - 12570) * 0.20 + (net_profit - 50270) * 0.40
     elif net_profit > 12570:
         estimated_tax = (net_profit - 12570) * 0.20
     else:
         estimated_tax = 0
-    
-    # Transaction review status
+
     total_transactions = session.query(func.count(Transaction.id)).scalar() or 0
     reviewed_transactions = session.query(func.count(Transaction.id)).filter(
         Transaction.reviewed == True
     ).scalar() or 0
     unreviewed = total_transactions - reviewed_transactions
-    
-    # Create 4 column layout for top metrics
+    completion_rate = (reviewed_transactions / total_transactions * 100) if total_transactions > 0 else 100
+    days_until_deadline = (datetime(2026, 1, 31) - datetime.now()).days
+
+    # ── Month-over-month trending ────────────────────────────────────
+    today = datetime.now().date()
+    cur_month_start = today.replace(day=1)
+    prev_month_end = cur_month_start - timedelta(days=1)
+    prev_month_start = prev_month_end.replace(day=1)
+
+    cur_income = session.query(func.sum(Income.amount_gross)).filter(
+        and_(Income.date >= cur_month_start, Income.date <= today)
+    ).scalar() or 0.0
+    prev_income = session.query(func.sum(Income.amount_gross)).filter(
+        and_(Income.date >= prev_month_start, Income.date <= prev_month_end)
+    ).scalar() or 0.0
+
+    cur_expenses = session.query(func.sum(Expense.amount)).filter(
+        and_(Expense.date >= cur_month_start, Expense.date <= today)
+    ).scalar() or 0.0
+    prev_expenses = session.query(func.sum(Expense.amount)).filter(
+        and_(Expense.date >= prev_month_start, Expense.date <= prev_month_end)
+    ).scalar() or 0.0
+
+    cur_profit = cur_income - cur_expenses
+    prev_profit = prev_income - prev_expenses
+
+    def _trend_html(current, previous, label="vs last month", invert=False):
+        """Return trending arrow HTML. invert=True means lower is better (e.g. expenses)."""
+        if previous == 0:
+            return f'<div class="ob-kpi-trend flat"><span class="arrow">—</span> No prior data</div>'
+        pct = ((current - previous) / abs(previous)) * 100
+        if abs(pct) < 1:
+            return f'<div class="ob-kpi-trend flat"><span class="arrow">—</span> Flat {label}</div>'
+        went_up = pct > 0
+        css = "down" if (went_up and invert) or (not went_up and not invert) else "up"
+        if invert:
+            css = "up" if pct < 0 else "down"  # lower expenses = good
+        arrow = "&#9650;" if went_up else "&#9660;"
+        return f'<div class="ob-kpi-trend {css}"><span class="arrow">{arrow}</span> {abs(pct):.0f}% {label}</div>'
+
+    # ── Hero Banner ─────────────────────────────────────────────────────
+    st.markdown(f"""
+    <div class="ob-hero">
+        <h1>Tax Dashboard</h1>
+        <p>Complete overview of your tax position for <strong style="color: #7aafff;">{tax_year}</strong></p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── KPI Row (staggered entrance) ────────────────────────────────────
     col1, col2, col3, col4 = st.columns(4)
-    
+
     with col1:
-        st.markdown("""
-        <div class="status-card">
-            <div class="metric-label">Net Profit</div>
-            <div class="metric-value">{}</div>
-            <div style="color: {}; font-size: 0.875rem; margin-top: 0.5rem;">
-                {} vs last month
-            </div>
+        profit_trend = _trend_html(cur_profit, prev_profit)
+        st.markdown(f"""
+        <div class="ob-kpi mr-stagger-1">
+            <div class="ob-kpi-label">Net Profit</div>
+            <div class="ob-kpi-value" style="color: {'#36c7a0' if net_profit >= 0 else '#e07a5f'};">{format_currency(net_profit)}</div>
+            {profit_trend}
         </div>
-        """.format(
-            format_currency(net_profit),
-            "#10b981" if net_profit > 0 else "#ef4444",
-            "↑ 12%" if net_profit > 0 else "↓ 5%"
-        ), unsafe_allow_html=True)
-    
+        """, unsafe_allow_html=True)
+
     with col2:
-        st.markdown("""
-        <div class="status-card">
-            <div class="metric-label">Estimated Tax</div>
-            <div class="metric-value">{}</div>
-            <div style="color: #64748b; font-size: 0.875rem; margin-top: 0.5rem;">
-                Due: 31 January 2025
-            </div>
+        st.markdown(f"""
+        <div class="ob-kpi mr-stagger-2">
+            <div class="ob-kpi-label">Estimated Tax</div>
+            <div class="ob-kpi-value" style="color: #e5b567;">{format_currency(estimated_tax)}</div>
+            <div class="ob-kpi-delta neutral">Due 31 January 2026</div>
         </div>
-        """.format(format_currency(estimated_tax)), unsafe_allow_html=True)
-    
+        """, unsafe_allow_html=True)
+
     with col3:
-        completion_rate = (reviewed_transactions / total_transactions * 100) if total_transactions > 0 else 100
-        st.markdown("""
-        <div class="status-card">
-            <div class="metric-label">Review Progress</div>
-            <div class="metric-value">{:.0f}%</div>
-            <div style="color: {}; font-size: 0.875rem; margin-top: 0.5rem;">
-                {} transactions pending
-            </div>
+        review_color = "#36c7a0" if completion_rate >= 100 else "#e5b567" if completion_rate >= 50 else "#e07a5f"
+        st.markdown(f"""
+        <div class="ob-kpi mr-stagger-3">
+            <div class="ob-kpi-label">Review Progress</div>
+            <div class="ob-kpi-value" style="color: {review_color};">{completion_rate:.0f}%</div>
+            <div class="ob-kpi-delta {'positive' if unreviewed == 0 else 'negative'}">{unreviewed} transaction{'s' if unreviewed != 1 else ''} pending</div>
         </div>
-        """.format(
-            completion_rate,
-            "#f59e0b" if unreviewed > 0 else "#10b981",
-            unreviewed
-        ), unsafe_allow_html=True)
-    
+        """, unsafe_allow_html=True)
+
     with col4:
-        days_until_deadline = (datetime(2025, 1, 31) - datetime.now()).days
-        st.markdown("""
-        <div class="status-card">
-            <div class="metric-label">Days to Deadline</div>
-            <div class="metric-value">{}</div>
-            <div style="color: {}; font-size: 0.875rem; margin-top: 0.5rem;">
-                31 January 2025
-            </div>
+        deadline_color = "#e07a5f" if days_until_deadline < 30 else "#e5b567" if days_until_deadline < 90 else "#36c7a0"
+        st.markdown(f"""
+        <div class="ob-kpi mr-stagger-4">
+            <div class="ob-kpi-label">Days to Deadline</div>
+            <div class="ob-kpi-value" style="color: {deadline_color};">{days_until_deadline}</div>
+            <div class="ob-kpi-delta neutral">31 January 2026</div>
         </div>
-        """.format(
-            days_until_deadline,
-            "#ef4444" if days_until_deadline < 30 else "#10b981"
-        ), unsafe_allow_html=True)
-    
-    # ============================================================================
-    # QUICK ACTIONS SECTION
-    # ============================================================================
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### ⚡ Quick Actions")
-    
-    col1, col2, col3, col4, col5 = st.columns(5)
-    
-    with col1:
-        if st.button("📥 Import Bank Statement", use_container_width=True):
-            st.session_state.navigate_to = "📥 Import Statements"
+        """, unsafe_allow_html=True)
+
+    # ── Quick Actions ───────────────────────────────────────────────────
+    st.markdown("""
+    <div class="ob-section-header">
+        <span class="ob-section-icon">&#9889;</span>
+        <h3>Quick Actions</h3>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="ob-qa-row">', unsafe_allow_html=True)
+    qa1, qa2, qa3, qa4, qa5 = st.columns(5)
+    with qa1:
+        if st.button("Import Statement", use_container_width=True, key="dash_import"):
+            st.session_state.navigate_to = "Import Statements"
             st.rerun()
-    
-    with col2:
-        if st.button("🔍 Review Transactions", use_container_width=True):
-            st.session_state.navigate_to = "🔍 Final Review"
+    with qa2:
+        if st.button("Review Transactions", use_container_width=True, key="dash_review"):
+            st.session_state.navigate_to = "Final Review"
             st.rerun()
-    
-    with col3:
-        if st.button("💰 Add Income", use_container_width=True):
+    with qa3:
+        if st.button("Add Income", use_container_width=True, key="dash_income"):
             st.session_state.navigate_to = "Income"
             st.rerun()
-    
-    with col4:
-        if st.button("💳 Add Expense", use_container_width=True):
+    with qa4:
+        if st.button("Add Expense", use_container_width=True, key="dash_expense"):
             st.session_state.navigate_to = "Expenses"
             st.rerun()
-    
-    with col5:
-        if st.button("📊 View Summary", use_container_width=True):
+    with qa5:
+        if st.button("HMRC Summary", use_container_width=True, key="dash_summary"):
             st.session_state.navigate_to = "Summary (HMRC)"
             st.rerun()
-    
-    # ============================================================================
-    # INSIGHTS & ALERTS SECTION
-    # ============================================================================
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Insight Alert ───────────────────────────────────────────────────
     if unreviewed > 0:
-        st.markdown("""
-        <div class="insight-card">
-            <span class="insight-icon">💡</span>
-            <strong>Action Required:</strong> You have {} unreviewed transactions. 
-            Review them to ensure accurate tax calculations.
+        st.markdown(f"""
+        <div class="ob-insight">
+            <span class="ob-insight-icon">&#128161;</span>
+            <div class="ob-insight-text">
+                <strong>Action Required:</strong> You have {unreviewed} unreviewed transaction{'s' if unreviewed != 1 else ''}.
+                Review them to ensure accurate tax calculations.
+            </div>
         </div>
-        """.format(unreviewed), unsafe_allow_html=True)
-    
-    # ============================================================================
-    # MAIN CONTENT AREA - 2 Column Layout
-    # ============================================================================
-    st.markdown("<br>", unsafe_allow_html=True)
-    
+        """, unsafe_allow_html=True)
+
+    # ── Main Content: Charts + Activity ─────────────────────────────────
     left_col, right_col = st.columns([2, 1])
-    
+
     with left_col:
-        # ========================================================================
-        # FINANCIAL OVERVIEW CHART
-        # ========================================================================
-        st.markdown("### 📈 Financial Overview")
-        
-        # Get monthly data for the chart
+        # Financial Overview Chart
+        st.markdown("""
+        <div class="ob-section-header">
+            <span class="ob-section-icon">&#128200;</span>
+            <h3>Financial Overview</h3>
+        </div>
+        """, unsafe_allow_html=True)
+
         monthly_data = []
         for month in range(1, 13):
             month_start = datetime(2024 if month >= 4 else 2025, month, 1)
@@ -300,185 +201,227 @@ def render_restructured_dashboard(session, settings):
                 month_end = datetime(2025, 1, 1)
             else:
                 month_end = datetime(2024 if month >= 4 else 2025, month + 1, 1)
-            
+
             month_income = session.query(func.sum(Income.amount_gross)).filter(
                 and_(Income.date >= month_start, Income.date < month_end)
             ).scalar() or 0
-            
+
             month_expenses = session.query(func.sum(Expense.amount)).filter(
                 and_(Expense.date >= month_start, Expense.date < month_end)
             ).scalar() or 0
-            
+
             monthly_data.append({
                 'Month': month_start.strftime('%b %Y'),
                 'Income': month_income,
                 'Expenses': month_expenses,
                 'Profit': month_income - month_expenses
             })
-        
+
         df_monthly = pd.DataFrame(monthly_data)
-        
-        # Create interactive chart
+
         fig = go.Figure()
-        
         fig.add_trace(go.Bar(
             name='Income',
             x=df_monthly['Month'],
             y=df_monthly['Income'],
-            marker_color='#10b981',
+            marker_color=OBSIDIAN["income"],
+            marker_line_width=0,
             text=[format_currency(v) for v in df_monthly['Income']],
             textposition='outside',
+            textfont=dict(color=OBSIDIAN["text_secondary"], size=10),
         ))
-        
         fig.add_trace(go.Bar(
             name='Expenses',
             x=df_monthly['Month'],
             y=df_monthly['Expenses'],
-            marker_color='#ef4444',
+            marker_color=OBSIDIAN["expense"],
+            marker_line_width=0,
             text=[format_currency(v) for v in df_monthly['Expenses']],
             textposition='outside',
+            textfont=dict(color=OBSIDIAN["text_secondary"], size=10),
         ))
-        
         fig.add_trace(go.Scatter(
             name='Net Profit',
             x=df_monthly['Month'],
             y=df_monthly['Profit'],
             mode='lines+markers',
-            line=dict(color='#667eea', width=3),
-            marker=dict(size=8),
+            line=dict(color=OBSIDIAN["gold"], width=3),
+            marker=dict(size=7, color=OBSIDIAN["gold"], line=dict(width=2, color=OBSIDIAN["bg"])),
             yaxis='y2'
         ))
-        
+
         fig.update_layout(
-            height=400,
-            showlegend=True,
-            hovermode='x unified',
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            yaxis=dict(
-                title="Amount (£)",
-                showgrid=True,
-                gridcolor='#f0f0f0'
-            ),
-            yaxis2=dict(
-                title="Net Profit (£)",
-                overlaying='y',
-                side='right',
-                showgrid=False
-            ),
-            xaxis=dict(
-                title="",
-                showgrid=False
-            ),
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="right",
-                x=1
-            ),
-            barmode='group',
-            bargap=0.15,
-            bargroupgap=0.1
+            **plotly_obsidian_layout(
+                height=400,
+                showlegend=True,
+                hovermode='x unified',
+                barmode='group',
+                bargap=0.15,
+                bargroupgap=0.1,
+                yaxis=dict(
+                    title="Amount",
+                    showgrid=True,
+                    gridcolor=OBSIDIAN["chart_grid"],
+                    zerolinecolor=OBSIDIAN["chart_grid"],
+                    title_font=dict(color=OBSIDIAN["text_secondary"]),
+                ),
+                yaxis2=dict(
+                    title="Net Profit",
+                    overlaying='y',
+                    side='right',
+                    showgrid=False,
+                    title_font=dict(color=OBSIDIAN["gold"]),
+                    tickfont=dict(color=OBSIDIAN["gold"]),
+                ),
+                xaxis=dict(title="", showgrid=False),
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1,
+                    bgcolor="rgba(0,0,0,0)",
+                    font=dict(color=OBSIDIAN["text_secondary"]),
+                ),
+            )
         )
-        
         st.plotly_chart(fig, use_container_width=True)
-        
-        # ========================================================================
-        # EXPENSE BREAKDOWN
-        # ========================================================================
-        st.markdown("### 💳 Expense Categories")
-        
-        # Get expense breakdown
+
+        # Expense Breakdown
+        st.markdown("""
+        <div class="ob-section-header">
+            <span class="ob-section-icon">&#128179;</span>
+            <h3>Expense Breakdown</h3>
+        </div>
+        """, unsafe_allow_html=True)
+
         expense_breakdown = session.query(
             Expense.category,
             func.sum(Expense.amount).label('total')
         ).filter(
             and_(Expense.date >= start_date, Expense.date <= end_date)
         ).group_by(Expense.category).all()
-        
+
         if expense_breakdown:
-            # Create donut chart
             fig_donut = go.Figure(data=[go.Pie(
                 labels=[cat for cat, _ in expense_breakdown],
                 values=[float(amt) for _, amt in expense_breakdown],
-                hole=.4,
-                marker=dict(colors=px.colors.sequential.Viridis)
+                hole=.45,
+                marker=dict(
+                    colors=OBSIDIAN["chart_colors"],
+                    line=dict(color=OBSIDIAN["bg"], width=2)
+                ),
             )])
-            
             fig_donut.update_traces(
                 textposition='inside',
                 textinfo='percent+label',
+                textfont=dict(color="white", size=11),
                 hovertemplate='<b>%{label}</b><br>£%{value:,.2f}<br>%{percent}<extra></extra>'
             )
-            
             fig_donut.update_layout(
-                height=350,
-                showlegend=True,
-                plot_bgcolor='white',
-                paper_bgcolor='white',
-                margin=dict(l=0, r=0, t=30, b=0)
+                **plotly_obsidian_layout(
+                    height=380,
+                    showlegend=True,
+                    margin=dict(l=0, r=0, t=20, b=0),
+                    legend=dict(
+                        font=dict(color=OBSIDIAN["text_secondary"], size=11),
+                        bgcolor="rgba(0,0,0,0)",
+                    ),
+                )
             )
-            
             st.plotly_chart(fig_donut, use_container_width=True)
         else:
-            st.info("No expenses recorded yet for this tax year")
-    
+            st.markdown("""
+            <div class="ob-empty">
+                <div class="ob-empty-icon">&#128203;</div>
+                <div class="ob-empty-title">No expenses recorded</div>
+                <div class="ob-empty-desc">Add expenses to see your spending breakdown</div>
+            </div>
+            """, unsafe_allow_html=True)
+
     with right_col:
-        # ========================================================================
-        # RECENT ACTIVITY FEED
-        # ========================================================================
-        st.markdown("### 🕐 Recent Activity")
-        
-        # Get recent transactions
-        recent_transactions = session.query(Transaction).order_by(
-            Transaction.date.desc()
-        ).limit(5).all()
-        
+        # Recent Activity with filter
+        st.markdown("""
+        <div class="ob-section-header">
+            <span class="ob-section-icon">&#128336;</span>
+            <h3>Recent Activity</h3>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Category filter for activity feed
+        activity_filter = st.selectbox(
+            "Filter",
+            ["All", "Income Only", "Expenses Only", "Unreviewed"],
+            key="dash_activity_filter",
+            label_visibility="collapsed",
+        )
+
+        txn_query = session.query(Transaction).order_by(Transaction.date.desc())
+        if activity_filter == "Income Only":
+            txn_query = txn_query.filter(Transaction.paid_in > 0)
+        elif activity_filter == "Expenses Only":
+            txn_query = txn_query.filter(Transaction.paid_out > 0)
+        elif activity_filter == "Unreviewed":
+            txn_query = txn_query.filter(Transaction.reviewed == False)
+
+        recent_transactions = txn_query.limit(8).all()
+
         if recent_transactions:
-            for txn in recent_transactions:
+            for idx, txn in enumerate(recent_transactions, start=1):
                 amount = txn.paid_in if txn.paid_in > 0 else txn.paid_out
                 amount_str = format_currency(amount)
-                if txn.paid_out > 0:
-                    amount_str = f"-{amount_str}"
-                    color = "#ef4444"
-                    icon = "💳"
-                else:
-                    color = "#10b981"
-                    icon = "💰"
-                
-                status_icon = "✅" if txn.reviewed else "⏳"
-                
+                is_income = txn.paid_in > 0
+                color = OBSIDIAN["income"] if is_income else OBSIDIAN["expense"]
+                sign = "+" if is_income else "-"
+                desc = txn.description[:35] + ("..." if len(txn.description) > 35 else "")
+                status = "Reviewed" if txn.reviewed else "Pending"
+                status_dot = "green" if txn.reviewed else "gold"
+
                 st.markdown(f"""
-                <div class="activity-item">
-                    <div style="display: flex; justify-content: space-between; align-items: start;">
-                        <div>
-                            <div style="font-weight: 600; color: #1f2937;">
-                                {icon} {txn.description[:30]}...
-                            </div>
-                            <div style="color: #64748b; font-size: 0.875rem; margin-top: 0.25rem;">
-                                {txn.date.strftime('%d %b %Y')} {status_icon}
-                            </div>
+                <div class="ob-activity-item mr-stagger-{min(idx, 8)}">
+                    <div>
+                        <div style="font-weight: 600; color: {OBSIDIAN['text']}; font-size: 0.88rem; margin-bottom: 0.15rem;">
+                            {desc}
                         </div>
-                        <div style="color: {color}; font-weight: 700; font-size: 1.1rem;">
-                            {amount_str}
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <span style="color: {OBSIDIAN['text_muted']}; font-size: 0.75rem;">
+                                {txn.date.strftime('%d %b %Y')}
+                            </span>
+                            <span class="ob-dot {status_dot}"></span>
+                            <span style="color: {OBSIDIAN['text_muted']}; font-size: 0.7rem;">{status}</span>
                         </div>
+                    </div>
+                    <div style="color: {color}; font-weight: 700; font-size: 0.95rem; white-space: nowrap;">
+                        {sign}{amount_str}
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
+
+            # View All button
+            if st.button("View All Transactions", use_container_width=True, key="dash_view_all"):
+                st.session_state.navigate_to = "Final Review"
+                st.rerun()
         else:
-            st.info("No transactions yet. Import a bank statement to get started.")
-        
-        # ========================================================================
-        # TAX YEAR PROGRESS
-        # ========================================================================
-        st.markdown("### 📅 Tax Year Progress")
-        
-        # Calculate how far through the tax year we are
+            st.markdown("""
+            <div class="ob-empty">
+                <div class="ob-empty-icon">&#128230;</div>
+                <div class="ob-empty-title">No transactions yet</div>
+                <div class="ob-empty-desc">Import a bank statement to get started</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Tax Year Progress
+        st.markdown("""
+        <div class="ob-section-header">
+            <span class="ob-section-icon">&#128197;</span>
+            <h3>Tax Year Progress</h3>
+        </div>
+        """, unsafe_allow_html=True)
+
         today = datetime.now().date()
         start_date_date = start_date.date() if hasattr(start_date, 'date') else start_date
         end_date_date = end_date.date() if hasattr(end_date, 'date') else end_date
-        
+
         if today < start_date_date:
             progress_pct = 0
         elif today > end_date_date:
@@ -487,137 +430,183 @@ def render_restructured_dashboard(session, settings):
             total_days = (end_date_date - start_date_date).days
             elapsed_days = (today - start_date_date).days
             progress_pct = (elapsed_days / total_days) * 100
-        
-        # Create progress visualization
+
         fig_progress = go.Figure(go.Indicator(
-            mode = "gauge+number",
-            value = progress_pct,
-            title = {'text': f"Tax Year {tax_year}"},
-            domain = {'x': [0, 1], 'y': [0, 1]},
-            gauge = {
-                'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "#64748b"},
-                'bar': {'color': "#667eea"},
-                'bgcolor': "white",
-                'borderwidth': 2,
-                'bordercolor': "#e0e7ff",
+            mode="gauge+number",
+            value=progress_pct,
+            number=dict(suffix="%", font=dict(color=OBSIDIAN["gold_light"], size=36)),
+            title=dict(text=f"Tax Year {tax_year}", font=dict(color=OBSIDIAN["text_secondary"], size=14)),
+            domain={'x': [0, 1], 'y': [0, 1]},
+            gauge={
+                'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': OBSIDIAN["text_muted"],
+                         'tickfont': dict(color=OBSIDIAN["text_muted"])},
+                'bar': {'color': OBSIDIAN["gold"]},
+                'bgcolor': OBSIDIAN["surface_alt"],
+                'borderwidth': 1,
+                'bordercolor': "rgba(79,143,234,0.08)",
                 'steps': [
-                    {'range': [0, 25], 'color': '#f0f4ff'},
-                    {'range': [25, 50], 'color': '#e0e7ff'},
-                    {'range': [50, 75], 'color': '#c7d2fe'},
-                    {'range': [75, 100], 'color': '#a5b4fc'}
+                    {'range': [0, 25], 'color': 'rgba(79,143,234,0.03)'},
+                    {'range': [25, 50], 'color': 'rgba(79,143,234,0.05)'},
+                    {'range': [50, 75], 'color': 'rgba(79,143,234,0.08)'},
+                    {'range': [75, 100], 'color': 'rgba(79,143,234,0.11)'}
                 ],
                 'threshold': {
-                    'line': {'color': "#ef4444", 'width': 4},
+                    'line': {'color': OBSIDIAN["expense"], 'width': 3},
                     'thickness': 0.75,
                     'value': 90
                 }
             }
         ))
-        
         fig_progress.update_layout(
-            height=250,
-            margin=dict(l=20, r=20, t=40, b=20),
-            paper_bgcolor='white',
-            font={'color': "#1f2937", 'family': "Arial"}
+            **plotly_obsidian_layout(
+                height=220,
+                margin=dict(l=20, r=20, t=40, b=10),
+            )
         )
-        
         st.plotly_chart(fig_progress, use_container_width=True)
-        
-        # Days remaining info
+
+        # Days remaining card
         st.markdown(f"""
-        <div style="text-align: center; padding: 1rem; background: #f8fafc; border-radius: 12px;">
-            <div style="font-size: 2rem; font-weight: 700; color: #667eea;">
+        <div class="ob-card" style="text-align: center; padding: 0.9rem;">
+            <div style="font-size: 1.85rem; font-weight: 700; color: {OBSIDIAN['gold_light']};">
                 {days_until_deadline}
             </div>
-            <div style="color: #64748b; font-size: 0.875rem;">
+            <div style="color: {OBSIDIAN['text_muted']}; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em;">
                 days until deadline
             </div>
         </div>
         """, unsafe_allow_html=True)
-    
-    # ============================================================================
-    # BOTTOM SECTION - Action Cards
-    # ============================================================================
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 🎯 Recommended Actions")
-    
+
+    # ── Recommended Actions ─────────────────────────────────────────────
+    st.markdown("""
+    <div class="ob-section-header">
+        <span class="ob-section-icon">&#127919;</span>
+        <h3>Recommended Actions</h3>
+    </div>
+    """, unsafe_allow_html=True)
+
     col1, col2, col3 = st.columns(3)
-    
+
     with col1:
         if unreviewed > 0:
+            border_color = OBSIDIAN["warning"]
             st.markdown(f"""
-            <div class="status-card" style="border-left: 4px solid #f59e0b;">
-                <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">Review Transactions</h4>
-                <p style="color: #64748b; margin: 0 0 1rem 0;">
-                    {unreviewed} transactions need review
+            <div class="ob-card mr-stagger-1" style="border-left: 3px solid {border_color};">
+                <h4 style="margin: 0 0 0.3rem; color: {OBSIDIAN['text']}; font-size: 0.95rem;">Review Transactions</h4>
+                <p style="color: {OBSIDIAN['text_secondary']}; margin: 0 0 0.5rem; font-size: 0.85rem;">
+                    {unreviewed} transaction{'s' if unreviewed != 1 else ''} need review
                 </p>
-                <div style="font-size: 0.875rem; color: #f59e0b;">
-                    Action required →
-                </div>
+                <span class="ob-badge gold">Action Required</span>
             </div>
             """, unsafe_allow_html=True)
         else:
-            st.markdown("""
-            <div class="status-card" style="border-left: 4px solid #10b981;">
-                <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">All Reviewed ✓</h4>
-                <p style="color: #64748b; margin: 0 0 1rem 0;">
+            st.markdown(f"""
+            <div class="ob-card mr-stagger-1" style="border-left: 3px solid {OBSIDIAN['income']};">
+                <h4 style="margin: 0 0 0.3rem; color: {OBSIDIAN['text']}; font-size: 0.95rem;">All Reviewed</h4>
+                <p style="color: {OBSIDIAN['text_secondary']}; margin: 0 0 0.5rem; font-size: 0.85rem;">
                     All transactions are categorized
                 </p>
-                <div style="font-size: 0.875rem; color: #10b981;">
-                    Great work! →
-                </div>
+                <span class="ob-badge income">Complete</span>
             </div>
             """, unsafe_allow_html=True)
-    
+
     with col2:
-        missing_months = 3  # Example value - you'd calculate this
-        if missing_months > 0:
-            st.markdown(f"""
-            <div class="status-card" style="border-left: 4px solid #ef4444;">
-                <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">Missing Statements</h4>
-                <p style="color: #64748b; margin: 0 0 1rem 0;">
-                    {missing_months} months have no data
-                </p>
-                <div style="font-size: 0.875rem; color: #ef4444;">
-                    Import required →
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown("""
-            <div class="status-card" style="border-left: 4px solid #10b981;">
-                <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">Complete Records</h4>
-                <p style="color: #64748b; margin: 0 0 1rem 0;">
-                    All months have transactions
-                </p>
-                <div style="font-size: 0.875rem; color: #10b981;">
-                    Looking good! →
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-    
+        st.markdown(f"""
+        <div class="ob-card mr-stagger-2" style="border-left: 3px solid {OBSIDIAN['info']};">
+            <h4 style="margin: 0 0 0.3rem; color: {OBSIDIAN['text']}; font-size: 0.95rem;">Import Statements</h4>
+            <p style="color: {OBSIDIAN['text_secondary']}; margin: 0 0 0.5rem; font-size: 0.85rem;">
+                Keep your records up to date
+            </p>
+            <span class="ob-badge info">Recommended</span>
+        </div>
+        """, unsafe_allow_html=True)
+
     with col3:
         if estimated_tax > 1000:
             st.markdown(f"""
-            <div class="status-card" style="border-left: 4px solid #8b5cf6;">
-                <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">Tax Payment Due</h4>
-                <p style="color: #64748b; margin: 0 0 1rem 0;">
+            <div class="ob-card mr-stagger-3" style="border-left: 3px solid {OBSIDIAN['gold']};">
+                <h4 style="margin: 0 0 0.3rem; color: {OBSIDIAN['text']}; font-size: 0.95rem;">Tax Payment Due</h4>
+                <p style="color: {OBSIDIAN['text_secondary']}; margin: 0 0 0.5rem; font-size: 0.85rem;">
                     Estimated: {format_currency(estimated_tax)}
                 </p>
-                <div style="font-size: 0.875rem; color: #8b5cf6;">
-                    Plan payment →
-                </div>
+                <span class="ob-badge gold">Plan Ahead</span>
             </div>
             """, unsafe_allow_html=True)
         else:
-            st.markdown("""
-            <div class="status-card" style="border-left: 4px solid #10b981;">
-                <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">Low Tax Bill</h4>
-                <p style="color: #64748b; margin: 0 0 1rem 0;">
+            st.markdown(f"""
+            <div class="ob-card mr-stagger-3" style="border-left: 3px solid {OBSIDIAN['income']};">
+                <h4 style="margin: 0 0 0.3rem; color: {OBSIDIAN['text']}; font-size: 0.95rem;">Low Tax Bill</h4>
+                <p style="color: {OBSIDIAN['text_secondary']}; margin: 0 0 0.5rem; font-size: 0.85rem;">
                     Under £1,000 estimated
                 </p>
-                <div style="font-size: 0.875rem; color: #10b981;">
-                    Well managed →
-                </div>
+                <span class="ob-badge income">Well Managed</span>
             </div>
             """, unsafe_allow_html=True)
+
+    # ── Financial Summary Table ─────────────────────────────────────────
+    st.markdown("""
+    <div class="ob-section-header">
+        <span class="ob-section-icon">&#128202;</span>
+        <h3>Financial Summary</h3>
+    </div>
+    """, unsafe_allow_html=True)
+
+    summary_col1, summary_col2 = st.columns(2)
+
+    with summary_col1:
+        income_trend = _trend_html(cur_income, prev_income)
+        expenses_trend = _trend_html(cur_expenses, prev_expenses, invert=True)
+        total_donations = session.query(func.sum(Donation.amount_paid)).filter(
+            and_(Donation.date >= start_date, Donation.date <= end_date)
+        ).scalar() or 0.0
+
+        total_miles = session.query(func.sum(Mileage.miles)).filter(
+            and_(Mileage.date >= start_date, Mileage.date <= end_date)
+        ).scalar() or 0.0
+
+        st.markdown(f"""
+        <div class="ob-card mr-stagger-1">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid rgba(79,143,234,0.06);">
+                    <td style="padding: 0.55rem 0; color: {OBSIDIAN['text_secondary']}; font-size: 0.88rem;">Gross Income {income_trend}</td>
+                    <td style="padding: 0.55rem 0; text-align: right; color: {OBSIDIAN['income']}; font-weight: 700;">{format_currency(total_income)}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(79,143,234,0.06);">
+                    <td style="padding: 0.55rem 0; color: {OBSIDIAN['text_secondary']}; font-size: 0.88rem;">Total Expenses {expenses_trend}</td>
+                    <td style="padding: 0.55rem 0; text-align: right; color: {OBSIDIAN['expense']}; font-weight: 700;">-{format_currency(total_expenses)}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(79,143,234,0.06);">
+                    <td style="padding: 0.55rem 0; color: {OBSIDIAN['text_secondary']}; font-size: 0.88rem;">Mileage Allowance</td>
+                    <td style="padding: 0.55rem 0; text-align: right; color: {OBSIDIAN['expense']}; font-weight: 700;">-{format_currency(total_mileage)}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 0.7rem 0 0.35rem; color: {OBSIDIAN['gold_light']}; font-weight: 700; font-size: 0.95rem;">Net Profit</td>
+                    <td style="padding: 0.7rem 0 0.35rem; text-align: right; color: {OBSIDIAN['gold_light']}; font-weight: 700; font-size: 1.1rem;">{format_currency(net_profit)}</td>
+                </tr>
+            </table>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with summary_col2:
+        st.markdown(f"""
+        <div class="ob-card mr-stagger-2">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid rgba(79,143,234,0.06);">
+                    <td style="padding: 0.55rem 0; color: {OBSIDIAN['text_secondary']}; font-size: 0.88rem;">Donations (Gift Aid)</td>
+                    <td style="padding: 0.55rem 0; text-align: right; color: {OBSIDIAN['text']}; font-weight: 700;">{format_currency(total_donations)}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(79,143,234,0.06);">
+                    <td style="padding: 0.55rem 0; color: {OBSIDIAN['text_secondary']}; font-size: 0.88rem;">Business Miles</td>
+                    <td style="padding: 0.55rem 0; text-align: right; color: {OBSIDIAN['text']}; font-weight: 700;">{total_miles:,.0f} miles</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(79,143,234,0.06);">
+                    <td style="padding: 0.55rem 0; color: {OBSIDIAN['text_secondary']}; font-size: 0.88rem;">Estimated Tax</td>
+                    <td style="padding: 0.55rem 0; text-align: right; color: {OBSIDIAN['warning']}; font-weight: 700;">{format_currency(estimated_tax)}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 0.7rem 0 0.35rem; color: {OBSIDIAN['gold_light']}; font-weight: 700; font-size: 0.95rem;">After Tax</td>
+                    <td style="padding: 0.7rem 0 0.35rem; text-align: right; color: {OBSIDIAN['gold_light']}; font-weight: 700; font-size: 1.1rem;">{format_currency(net_profit - estimated_tax)}</td>
+                </tr>
+            </table>
+        </div>
+        """, unsafe_allow_html=True)

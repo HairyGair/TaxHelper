@@ -512,7 +512,7 @@ def render_aurora_export_panel(session,
     # Aurora-themed section header
     st.markdown("""
     <div style="
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #3a6db8 50%, #f093fb 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -569,18 +569,18 @@ def render_aurora_export_panel(session,
                 st.markdown("""
                 <style>
                 .aurora-csv-btn button {
-                    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+                    background: linear-gradient(135deg, #36c7a0 0%, #059669 100%) !important;
                     color: white !important;
                     border: none !important;
                     border-radius: 12px !important;
                     padding: 12px 24px !important;
                     font-weight: 600 !important;
                     transition: all 0.3s ease !important;
-                    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3) !important;
+                    box-shadow: 0 4px 16px rgba(54, 199, 160, 0.3) !important;
                 }
                 .aurora-csv-btn button:hover {
                     transform: translateY(-2px) !important;
-                    box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5) !important;
+                    box-shadow: 0 6px 24px rgba(54, 199, 160, 0.5) !important;
                 }
                 </style>
                 """, unsafe_allow_html=True)

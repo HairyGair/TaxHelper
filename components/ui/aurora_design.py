@@ -26,9 +26,9 @@ def inject_aurora_design():
         --aurora-surface-lighter: #252c56;
 
         /* Aurora Gradient Definitions */
-        --aurora-gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        --aurora-gradient-1: linear-gradient(135deg, #4f8fea 0%, #3a6db8 50%, #f093fb 100%);
         --aurora-gradient-2: linear-gradient(135deg, #FA8BFF 0%, #2BD2FF 50%, #2BFF88 100%);
-        --aurora-gradient-3: linear-gradient(45deg, #8b5cf6 0%, #3b82f6 50%, #10b981 100%);
+        --aurora-gradient-3: linear-gradient(45deg, #8b5cf6 0%, #3b82f6 50%, #36c7a0 100%);
         --aurora-gradient-4: linear-gradient(90deg, #ec4899 0%, #8b5cf6 50%, #3b82f6 100%);
 
         /* Individual Colors */
@@ -37,10 +37,10 @@ def inject_aurora_design():
         --aurora-purple-light: #a78bfa;
         --aurora-blue: #3b82f6;
         --aurora-blue-dark: #2563eb;
-        --aurora-blue-light: #60a5fa;
-        --aurora-green: #10b981;
+        --aurora-blue-light: #7aafff;
+        --aurora-green: #36c7a0;
         --aurora-green-dark: #059669;
-        --aurora-green-light: #34d399;
+        --aurora-green-light: #36c7a0;
         --aurora-pink: #ec4899;
         --aurora-pink-dark: #db2777;
         --aurora-pink-light: #f9a8d4;
@@ -161,7 +161,7 @@ def inject_aurora_design():
             radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.2) 0%, transparent 50%),
             radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 50%),
             radial-gradient(circle at 40% 20%, rgba(236, 72, 153, 0.15) 0%, transparent 50%),
-            radial-gradient(circle at 90% 10%, rgba(16, 185, 129, 0.15) 0%, transparent 50%);
+            radial-gradient(circle at 90% 10%, rgba(54, 199, 160, 0.15) 0%, transparent 50%);
         animation: float-orb 30s ease-in-out infinite;
         pointer-events: none;
         z-index: 0;
@@ -176,7 +176,7 @@ def inject_aurora_design():
         width: 100%;
         height: 100%;
         background:
-            radial-gradient(circle at 70% 30%, rgba(102, 126, 234, 0.1) 0%, transparent 40%),
+            radial-gradient(circle at 70% 30%, rgba(79, 143, 234, 0.1) 0%, transparent 40%),
             radial-gradient(circle at 30% 70%, rgba(249, 168, 212, 0.1) 0%, transparent 40%);
         animation: float-orb 20s ease-in-out infinite reverse;
         pointer-events: none;
@@ -679,7 +679,7 @@ def inject_aurora_design():
     /* Success alert */
     .stSuccess {
         border-color: var(--aurora-green);
-        background: rgba(16, 185, 129, 0.1);
+        background: rgba(54, 199, 160, 0.1);
         color: var(--aurora-text-primary);
     }
 
@@ -1225,7 +1225,7 @@ def create_aurora_hero(title, subtitle, icon=""):
     """
     hero_html = f"""
     <div style="
-        background: linear-gradient(135deg, #0f2027 0%, #203a43 25%, #2c5364 100%);
+        background: linear-gradient(135deg, #0b0e14 0%, #203a43 25%, #2c5364 100%);
         position: relative;
         padding: 2.5rem 2rem;
         border-radius: 20px;
@@ -1277,7 +1277,7 @@ def create_aurora_metric_card(label, value, icon="", color="purple", change=None
     color_map = {
         "purple": "#8b5cf6",
         "blue": "#3b82f6",
-        "green": "#10b981",
+        "green": "#36c7a0",
         "pink": "#ec4899",
         "cyan": "#2BD2FF"
     }
@@ -1331,7 +1331,7 @@ def create_aurora_data_card(title, amount, subtitle="", category="", trend=""):
     """
     # Determine color based on amount (positive = green, negative = red)
     is_positive = not amount.startswith('-')
-    amount_color = "#10b981" if is_positive else "#ef4444"
+    amount_color = "#36c7a0" if is_positive else "#e07a5f"
 
     category_html = f'<span style="background: rgba(139, 92, 246, 0.2); color: #c77dff; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">{category}</span>' if category else ''
     trend_html = f'<div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin-top: 0.25rem;">{trend}</div>' if trend else ''
@@ -1418,7 +1418,7 @@ def create_aurora_progress_ring(percentage, label, size=200):
                 <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
                     <stop offset="50%" style="stop-color:#3b82f6;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#36c7a0;stop-opacity:1" />
                 </linearGradient>
             </defs>
         </svg>

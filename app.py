@@ -120,6 +120,7 @@ from components.ui.buttons import (
     render_yes_no_dialog, render_quick_action_buttons,
     render_nav_buttons
 )
+# Legacy CSS imports kept for backward compatibility but superseded by theme
 from components.ui.styles import inject_custom_css
 from components.ui.modern_styles import inject_modern_styles
 from components.ui.mobile_styles import inject_mobile_responsive_css, check_mobile_viewport
@@ -133,6 +134,9 @@ from components.ui.aurora_components import (
     create_aurora_progress_ring,
     create_aurora_divider
 )
+
+# Unified Obsidian Ledger Design System (replaces all above CSS)
+from components.ui.theme import inject_obsidian_theme
 
 # Phase 6: Data Visualization Components (Phase 2)
 from components.ui.charts import (
@@ -171,13 +175,16 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Inject Obsidian Ledger unified design system
+inject_obsidian_theme()
+
 # Security: Debug mode from environment variable (disabled by default)
 # Set environment variable TAX_HELPER_DEBUG=1 to enable debug mode
 DEBUG = os.environ.get('TAX_HELPER_DEBUG', '0') == '1'
 
 # Display warning if debug mode is enabled
 if DEBUG:
-    st.warning("⚠️ Debug mode is enabled. This should only be used in development environments.")
+    st.warning("Debug mode is enabled. This should only be used in development environments.")
 
 # Initialize database
 DB_PATH = os.path.join(os.path.dirname(__file__), 'tax_helper.db')
@@ -276,19 +283,16 @@ def get_confidence_badge(score):
         return ""
 
     if score >= 70:
-        color = "#28a745"  # Green
-        emoji = "🟢"
+        color = "#36c7a0"
         label = "High"
     elif score >= 40:
-        color = "#ffc107"  # Amber
-        emoji = "🟡"
+        color = "#e5b567"
         label = "Medium"
     else:
-        color = "#dc3545"  # Red
-        emoji = "🔴"
+        color = "#e07a5f"
         label = "Low"
 
-    return f'<span style="background-color: {color}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 5px;">{emoji} {label} {score}%</span>'
+    return f'<span style="background-color: {color}; color: #0b0e14; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 5px;">{label} {score}%</span>'
 
 
 # Helper function to get pattern emoji
@@ -355,15 +359,74 @@ def save_setting(key, value):
         raise
 
 
-# Sidebar navigation
-st.sidebar.title("💷 Tax Helper")
+# Sidebar navigation — Obsidian Ledger style
+st.sidebar.markdown("""
+<div style="padding: 0.5rem 0.25rem 0.75rem; text-align: left;">
+    <div style="font-size: 1.4rem; font-weight: 700; color: #7aafff; letter-spacing: -0.03em; line-height: 1.2;">
+        Tax Helper
+    </div>
+    <div style="font-size: 0.68rem; color: rgba(200,205,213,0.38); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.15rem;">
+        UK Self Assessment
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
 st.sidebar.markdown("---")
+
+# Global search
+_search_q = st.sidebar.text_input(
+    "Search transactions",
+    placeholder="Search...",
+    key="global_search",
+    label_visibility="collapsed",
+)
+if _search_q and len(_search_q) >= 2:
+    from sqlalchemy import or_
+    _sq = f"%{_search_q}%"
+    _results = []
+    # Search transactions
+    _txns = session.query(Transaction).filter(
+        Transaction.description.ilike(_sq)
+    ).order_by(Transaction.date.desc()).limit(5).all()
+    for t in _txns:
+        amt = t.paid_in if t.paid_in > 0 else t.paid_out
+        sign = "+" if t.paid_in > 0 else "-"
+        _results.append(("Transaction", t.description[:40], f"{sign}{format_currency(amt)}", "Final Review"))
+    # Search income
+    _inc = session.query(Income).filter(
+        or_(Income.source.ilike(_sq), Income.description.ilike(_sq))
+    ).order_by(Income.date.desc()).limit(3).all()
+    for i in _inc:
+        _results.append(("Income", i.source[:40], format_currency(i.amount_gross), "Income"))
+    # Search expenses
+    _exp = session.query(Expense).filter(
+        or_(Expense.supplier.ilike(_sq), Expense.description.ilike(_sq))
+    ).order_by(Expense.date.desc()).limit(3).all()
+    for e in _exp:
+        _results.append(("Expense", e.supplier[:40], format_currency(e.amount), "Expenses"))
+
+    if _results:
+        for rtype, rdesc, ramt, rpage in _results[:8]:
+            badge_color = "#36c7a0" if rtype == "Income" else "#e07a5f" if rtype == "Expense" else "#7aafff"
+            st.sidebar.markdown(
+                f'<div style="padding:0.3rem 0; font-size:0.78rem;">'
+                f'<span style="color:{badge_color}; font-weight:600;">{rtype}</span> '
+                f'<span style="color:#c8cdd5;">{rdesc}</span> '
+                f'<span style="color:rgba(200,205,213,0.5);">{ramt}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        if st.sidebar.button("View results in Review", key="search_go", use_container_width=True):
+            st.session_state.navigate_to = "Final Review"
+            st.rerun()
+    else:
+        st.sidebar.caption("No results found")
+    st.sidebar.markdown("---")
 
 # Check if navigation was triggered from action buttons
 if 'navigate_to' in st.session_state:
     target_page = st.session_state.navigate_to
     del st.session_state.navigate_to
-    # Force the page change by updating session state
     st.session_state.main_nav = target_page
     st.rerun()
 
@@ -371,32 +434,30 @@ page = st.sidebar.radio(
     "Navigation",
     [
         "Dashboard",
-        "📥 Import Statements",
-        "🔍 Final Review",
+        "Import Statements",
+        "Final Review",
         "Income",
         "Expenses",
         "Mileage",
         "Donations",
         "Rules",
         "Summary (HMRC)",
-        "📚 HMRC Guidance",
+        "HMRC Guidance",
         "Settings",
         "Export",
-        "🕒 Audit Trail",  # Phase 3: Audit Trail page
-        "📎 Batch Upload",  # Phase 4: Batch Receipt Upload
-        "📊 Reports"  # Phase 4: Compliance Reports
+        "Audit Trail",
+        "Batch Upload",
+        "Reports"
     ],
-    key="main_nav"  # Add explicit key to ensure state is tracked
+    key="main_nav",
+    label_visibility="collapsed"
 )
 
-# Debug info (remove this later if needed)
+# Debug info
 if DEBUG:
     st.sidebar.caption(f"Current page: {page}")
     st.sidebar.caption(f"Session state keys: {len(st.session_state.keys())} keys")
-
-    # Add clear cache button in debug mode
-    if st.sidebar.button("🧹 Clear Form Cache"):
-        # Keep only essential keys
+    if st.sidebar.button("Clear Form Cache", use_container_width=True):
         essential_keys = ['db_session', 'dashboard_last_refresh', 'main_nav', 'current_page',
                          'page_size', 'sort_by', 'confidence_filter']
         keys_to_remove = [k for k in list(st.session_state.keys()) if k not in essential_keys]
@@ -406,48 +467,61 @@ if DEBUG:
 
 st.sidebar.markdown("---")
 settings = load_settings(session)
-st.sidebar.markdown(f"**Tax Year:** {settings.get('tax_year', 'N/A')}")
 
-# ========================================================================
-# PHASE 2: Sidebar Progress Badge
-# ========================================================================
-# TODO: Re-enable when progress widget is implemented
-# render_sidebar_badge(session)
+# Tax year & status section
+tax_year = settings.get('tax_year', 'N/A')
+st.sidebar.markdown(f"""
+<div style="padding: 0.5rem 0.2rem;">
+    <div style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(200,205,213,0.38); margin-bottom: 0.3rem;">Tax Year</div>
+    <div style="font-size: 1.05rem; font-weight: 700; color: #7aafff;">{tax_year}</div>
+</div>
+""", unsafe_allow_html=True)
 
-# ========================================================================
-# PHASE 3: Undo Button & Notification
-# ========================================================================
 render_undo_button(session)
 render_undo_notification()
 
-# Show unreviewed transaction count in sidebar
+# Unreviewed transaction count
 unreviewed_sidebar_count = session.query(func.count(Transaction.id)).filter(
     Transaction.reviewed == False
 ).scalar() or 0
 
 if unreviewed_sidebar_count > 0:
-    st.sidebar.warning(f"📥 {unreviewed_sidebar_count} unreviewed transaction{'s' if unreviewed_sidebar_count != 1 else ''}")
+    st.sidebar.markdown(f"""
+    <div style="background: rgba(224,122,95,0.06); border: 1px solid rgba(224,122,95,0.1); border-radius: 8px; padding: 0.55rem 0.75rem; margin: 0.5rem 0;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #e07a5f; box-shadow: 0 0 5px rgba(224,122,95,0.4);"></span>
+            <span style="color: rgba(200,205,213,0.8); font-size: 0.82rem; font-weight: 500;">
+                {unreviewed_sidebar_count} unreviewed transaction{'s' if unreviewed_sidebar_count != 1 else ''}
+            </span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 else:
-    st.sidebar.success("✅ All transactions reviewed!")
+    st.sidebar.markdown("""
+    <div style="background: rgba(54,199,160,0.05); border: 1px solid rgba(54,199,160,0.1); border-radius: 8px; padding: 0.55rem 0.75rem; margin: 0.5rem 0;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #36c7a0; box-shadow: 0 0 5px rgba(54,199,160,0.4);"></span>
+            <span style="color: rgba(200,205,213,0.8); font-size: 0.82rem; font-weight: 500;">
+                All transactions reviewed
+            </span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-st.sidebar.markdown(f"**Database:** {DB_PATH}")
-
-# ========================================================================
-# PHASE 4: Quick Actions & Command Palette
-# ========================================================================
 st.sidebar.markdown("---")
-st.sidebar.subheader("⚡ Quick Actions")
 
-# Command Palette trigger
-if st.sidebar.button("⌨️ Command Palette (Cmd+K)", use_container_width=True):
+# Quick Actions
+st.sidebar.markdown("""
+<div style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(200,205,213,0.3); margin-bottom: 0.5rem; padding-left: 0.2rem;">Quick Actions</div>
+""", unsafe_allow_html=True)
+
+if st.sidebar.button("Command Palette", use_container_width=True, key="cmd_palette_btn"):
     st.session_state.show_command_palette = True
 
-# Quick add merchant
 if quick_add_merchant_button(session):
     st.session_state.show_quick_add_merchant = True
 
-# Quick generate report
-if st.sidebar.button("📊 Quick Report", use_container_width=True):
+if st.sidebar.button("Quick Report", use_container_width=True, key="quick_report_btn"):
     st.session_state.show_quick_report = True
 
 # ========================================================================
@@ -500,15 +574,16 @@ def render_transaction_card(txn: Transaction, index: int, total: int):
         index: Current transaction index (0-based)
         total: Total number of transactions
     """
-    # Card container with subtle shadow
+    # Card container
     st.markdown(f"""
     <div style="
-        background: white;
+        background: rgba(18, 22, 31, 0.85);
         padding: 24px;
         border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
         margin: 20px 0;
-        border-left: 4px solid #667eea;
+        border-left: 4px solid #4f8fea;
+        border: 1px solid rgba(79, 143, 234, 0.08);
     ">
     </div>
     """, unsafe_allow_html=True)
@@ -528,11 +603,11 @@ def render_transaction_card(txn: Transaction, index: int, total: int):
     with col3:
         amount = txn.paid_in if txn.paid_in > 0 else txn.paid_out
         direction = "IN" if txn.paid_in > 0 else "OUT"
-        color = "#28a745" if txn.paid_in > 0 else "#dc3545"
+        color = "#36c7a0" if txn.paid_in > 0 else "#e07a5f"
 
         st.markdown(f"""
         <div style="text-align: right;">
-            <div style="font-size: 0.8rem; color: #6c757d;">{direction}</div>
+            <div style="font-size: 0.8rem; color: rgba(200, 205, 213, 0.45);">{direction}</div>
             <div style="font-size: 1.8rem; font-weight: bold; color: {color};">
                 £{amount:,.2f}
             </div>
@@ -545,10 +620,10 @@ def render_transaction_card(txn: Transaction, index: int, total: int):
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            confidence_color = "#28a745" if txn.confidence_score >= 70 else "#ffc107" if txn.confidence_score >= 40 else "#dc3545"
+            confidence_color = "#36c7a0" if txn.confidence_score >= 70 else "#e5b567" if txn.confidence_score >= 40 else "#e07a5f"
             st.markdown(f"""
-            <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
-                <div style="font-size: 0.7rem; color: #6c757d; text-transform: uppercase;">AI Confidence</div>
+            <div style="text-align: center; padding: 8px; background: #181d28; border-radius: 6px; border: 1px solid rgba(79, 143, 234, 0.08);">
+                <div style="font-size: 0.7rem; color: rgba(200, 205, 213, 0.45); text-transform: uppercase;">AI Confidence</div>
                 <div style="font-size: 1.3rem; font-weight: bold; color: {confidence_color};">
                     {txn.confidence_score:.0f}%
                 </div>
@@ -559,9 +634,9 @@ def render_transaction_card(txn: Transaction, index: int, total: int):
             suggestion_icon = "🏠" if txn.is_personal else "💼"
             suggestion_text = "Personal" if txn.is_personal else "Business"
             st.markdown(f"""
-            <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
-                <div style="font-size: 0.7rem; color: #6c757d; text-transform: uppercase;">AI Suggests</div>
-                <div style="font-size: 1.1rem; font-weight: bold;">
+            <div style="text-align: center; padding: 8px; background: #181d28; border-radius: 6px; border: 1px solid rgba(79, 143, 234, 0.08);">
+                <div style="font-size: 0.7rem; color: rgba(200, 205, 213, 0.45); text-transform: uppercase;">AI Suggests</div>
+                <div style="font-size: 1.1rem; font-weight: bold; color: #c8cdd5;">
                     {suggestion_icon} {suggestion_text}
                 </div>
             </div>
@@ -570,9 +645,9 @@ def render_transaction_card(txn: Transaction, index: int, total: int):
         with col3:
             if txn.guessed_category:
                 st.markdown(f"""
-                <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
-                    <div style="font-size: 0.7rem; color: #6c757d; text-transform: uppercase;">Category</div>
-                    <div style="font-size: 1.1rem; font-weight: bold;">
+                <div style="text-align: center; padding: 8px; background: #181d28; border-radius: 6px; border: 1px solid rgba(79, 143, 234, 0.08);">
+                    <div style="font-size: 0.7rem; color: rgba(200, 205, 213, 0.45); text-transform: uppercase;">Category</div>
+                    <div style="font-size: 1.1rem; font-weight: bold; color: #f5d060;">
                         {txn.guessed_category}
                     </div>
                 </div>
@@ -725,15 +800,13 @@ if page == "Dashboard":
 # ============================================================================
 # PAGE: IMPORT STATEMENTS
 # ============================================================================
-elif page == "📥 Import Statements":
-    # Use the restructured import screen with modern interface
+elif page == "Import Statements":
     from import_restructured import render_restructured_import_screen
     render_restructured_import_screen(session, settings)
 # ============================================================================
 # PAGE: FINAL REVIEW
 # ============================================================================
-elif page == "🔍 Final Review":
-    # Use the restructured review screen with modern interface
+elif page == "Final Review":
     from review_restructured import render_restructured_review_screen
     render_restructured_review_screen(session, settings)
 
@@ -791,7 +864,7 @@ elif page == "Settings":
 # ============================================================================
 # PAGE: HMRC GUIDANCE
 # ============================================================================
-elif page == "📚 HMRC Guidance":
+elif page == "HMRC Guidance":
     from guidance_restructured import render_restructured_guidance_screen
     render_restructured_guidance_screen(session, settings)
 
@@ -807,8 +880,7 @@ elif page == "Export":
 # ============================================================================
 # PAGE: AUDIT TRAIL
 # ============================================================================
-elif page == "🕒 Audit Trail":
-    # Use the restructured audit trail screen with modern interface
+elif page == "Audit Trail":
     from audit_trail_restructured import render_restructured_audit_trail_screen
     render_restructured_audit_trail_screen(session, settings)
 
@@ -816,8 +888,7 @@ elif page == "🕒 Audit Trail":
 # ============================================================================
 # PAGE: BATCH UPLOAD (Phase 4)
 # ============================================================================
-elif page == "📎 Batch Upload":
-    # Use the restructured batch upload screen with modern interface
+elif page == "Batch Upload":
     from batch_upload_restructured import render_restructured_batch_upload_screen
     render_restructured_batch_upload_screen(session, settings)
 
@@ -825,7 +896,6 @@ elif page == "📎 Batch Upload":
 # ============================================================================
 # PAGE: REPORTS (Phase 4)
 # ============================================================================
-elif page == "📊 Reports":
-    # Use the restructured reports screen with modern interface
+elif page == "Reports":
     from reports_restructured import render_restructured_reports_screen
     render_restructured_reports_screen(session, settings)

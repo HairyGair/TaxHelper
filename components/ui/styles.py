@@ -48,7 +48,7 @@ def inject_custom_css():
 
     /* Primary button styling */
     .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #3a6db8 100%);
         border: none;
         font-weight: 600;
         transition: all 0.2s ease;
@@ -56,7 +56,7 @@ def inject_custom_css():
 
     .stButton > button[kind="primary"]:hover {
         transform: scale(1.05);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 4px 12px rgba(79, 143, 234, 0.4);
     }
 
     .stButton > button[kind="primary"]:active {
@@ -105,12 +105,12 @@ def inject_custom_css():
 
     /* Positive delta */
     .stMetric [data-testid="stMetricDelta"] svg[fill="none"] {
-        fill: #28a745 !important;
+        fill: #36c7a0 !important;
     }
 
     /* Negative delta */
     .stMetric [data-testid="stMetricDelta"][data-negative="true"] svg {
-        fill: #dc3545 !important;
+        fill: #e07a5f !important;
     }
 
     /* ============================================
@@ -118,7 +118,7 @@ def inject_custom_css():
        ============================================ */
 
     .stProgress > div > div > div {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(90deg, #4f8fea 0%, #3a6db8 100%);
         border-radius: 4px;
     }
 
@@ -188,8 +188,8 @@ def inject_custom_css():
     }
 
     .stTextInput > div > div > input:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        border-color: #4f8fea;
+        box-shadow: 0 0 0 0.2rem rgba(79, 143, 234, 0.25);
     }
 
     /* Number inputs */
@@ -218,7 +218,7 @@ def inject_custom_css():
     }
 
     .stFileUploader > div:hover {
-        border-color: #667eea;
+        border-color: #4f8fea;
         background-color: #f8f9fa;
     }
 
@@ -229,7 +229,7 @@ def inject_custom_css():
     /* Success messages */
     .stSuccess {
         background-color: #d4edda;
-        border-left: 4px solid #28a745;
+        border-left: 4px solid #36c7a0;
         border-radius: 6px;
         padding: 1rem;
     }
@@ -245,7 +245,7 @@ def inject_custom_css():
     /* Warning messages */
     .stWarning {
         background-color: #fff3cd;
-        border-left: 4px solid #ffc107;
+        border-left: 4px solid #e5b567;
         border-radius: 6px;
         padding: 1rem;
     }
@@ -253,7 +253,7 @@ def inject_custom_css():
     /* Error messages */
     .stError {
         background-color: #f8d7da;
-        border-left: 4px solid #dc3545;
+        border-left: 4px solid #e07a5f;
         border-radius: 6px;
         padding: 1rem;
     }
@@ -284,7 +284,7 @@ def inject_custom_css():
 
     /* Selected radio button */
     section[data-testid="stSidebar"] .stRadio label[data-checked="true"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4f8fea 0%, #3a6db8 100%);
         color: white;
         font-weight: 600;
     }
@@ -317,7 +317,7 @@ def inject_custom_css():
 
     .stTabs [aria-selected="true"] {
         background: white !important;
-        color: #007bff !important;  /* Blue for selected tab */
+        color: #4f8fea !important;  /* Blue for selected tab */
         box-shadow: 0 2px 4px rgba(0,0,0,0.08);
         font-weight: 600;
     }
@@ -389,19 +389,19 @@ def inject_custom_css():
     }
 
     .text-primary {
-        color: #667eea !important;
+        color: #4f8fea !important;
     }
 
     .text-success {
-        color: #28a745 !important;
+        color: #36c7a0 !important;
     }
 
     .text-danger {
-        color: #dc3545 !important;
+        color: #e07a5f !important;
     }
 
     .text-warning {
-        color: #ffc107 !important;
+        color: #e5b567 !important;
     }
 
     /* Spacing utilities */
