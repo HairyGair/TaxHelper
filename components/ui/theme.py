@@ -48,7 +48,7 @@ OBSIDIAN = {
     # Text
     "text":         "#c8cdd5",
     "text_secondary": "rgba(200, 205, 213, 0.65)",
-    "text_muted":   "rgba(200, 205, 213, 0.38)",
+    "text_muted":   "rgba(200, 205, 213, 0.55)",
 
     # Chart palette
     "chart_colors": [
@@ -57,7 +57,7 @@ OBSIDIAN = {
         "#a3d977", "#d4a0c0",
     ],
     "chart_bg":     "#12161f",
-    "chart_grid":   "rgba(200, 205, 213, 0.05)",
+    "chart_grid":   "rgba(200, 205, 213, 0.15)",
     "chart_text":   "#c8cdd5",
 }
 
@@ -130,7 +130,7 @@ _MERIDIAN_CSS = """
     /* Text */
     --mr-text:          #c8cdd5;
     --mr-text-2:        rgba(200, 205, 213, 0.65);
-    --mr-text-3:        rgba(200, 205, 213, 0.38);
+    --mr-text-3:        rgba(200, 205, 213, 0.55);
     --mr-text-inv:      #0b0e14;
 
     /* Borders / Glass */
@@ -254,8 +254,8 @@ h3 { font-size: 1.2rem !important; }
 
 p, .stMarkdown, .stMarkdown p { color: var(--mr-text-2); line-height: 1.6; }
 label { color: var(--mr-text-2) !important; font-weight: 500; font-size: 0.88rem; }
-a { color: var(--mr-sapphire-light); text-decoration: none; }
-a:hover { color: var(--mr-sapphire); text-decoration: underline; }
+a { color: var(--mr-sapphire-light); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+a:hover { color: var(--mr-sapphire); text-decoration-thickness: 2px; }
 
 /* Sidebar ---------------------------------------------------------------- */
 section[data-testid="stSidebar"] {
@@ -285,7 +285,7 @@ section[data-testid="stSidebar"] .stRadio > div {
 }
 
 section[data-testid="stSidebar"] .stRadio > div > label {
-    color: var(--mr-text-3) !important;
+    color: var(--mr-text-2) !important;
     padding: 0.5rem 0.75rem;
     border-radius: var(--mr-r-md);
     transition: all var(--mr-t-fast) var(--mr-ease);
@@ -351,7 +351,7 @@ div[data-testid="metric-container"]:hover {
     transform: translateY(-1px);
 }
 div[data-testid="metric-container"] [data-testid="stMetricLabel"] {
-    color: var(--mr-text-3) !important;
+    color: var(--mr-text-2) !important;
     font-weight: 600;
     font-size: 0.72rem;
     text-transform: uppercase;
@@ -490,7 +490,7 @@ div[data-testid="metric-container"] [data-testid="stMetricValue"] {
 }
 .stTabs [data-baseweb="tab"] {
     background: transparent;
-    color: var(--mr-text-3) !important;
+    color: var(--mr-text-2) !important;
     border-radius: var(--mr-r-sm);
     padding: 0.5rem 1.1rem;
     font-weight: 500;
@@ -662,10 +662,59 @@ div[data-testid="metric-container"] [data-testid="stMetricValue"] {
 }
 
 /* Focus accessible ------------------------------------------------------- */
-*:focus-visible {
+*:focus-visible,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--mr-sapphire) !important;
+    outline-offset: 2px !important;
+    border-radius: 3px;
+}
+
+/* Focus-within for custom HTML components */
+.ob-action-btn:focus-within,
+.ob-activity-item:focus-within,
+.ob-insight:focus-within,
+.mr-chart-filter:focus-within,
+.ob-card:focus-within,
+.ob-kpi:focus-within {
     outline: 2px solid var(--mr-sapphire);
     outline-offset: 2px;
-    border-radius: 3px;
+    border-radius: var(--mr-r-md);
+}
+
+/* Screen reader only utility */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Skip to main content link */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--mr-sapphire);
+    color: white;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 0 0 4px 4px;
+    z-index: 9999;
+    font-weight: 600;
+    font-size: 0.88rem;
+}
+.skip-link:focus {
+    top: 0;
 }
 
 /* Dividers / hr ---------------------------------------------------------- */
@@ -902,7 +951,7 @@ hr {
 }
 .ob-empty-icon { font-size: 2.5rem; margin-bottom: 0.6rem; opacity: 0.4; }
 .ob-empty-title { font-size: 1.1rem; font-weight: 600; color: var(--mr-text); margin-bottom: 0.2rem; }
-.ob-empty-desc { color: var(--mr-text-3); font-size: 0.88rem; }
+.ob-empty-desc { color: var(--mr-text-2); font-size: 0.88rem; }
 
 /* Badge */
 .ob-badge {
@@ -957,9 +1006,10 @@ hr {
 
 /* Touch devices */
 @media (hover: none) and (pointer: coarse) {
-    .stButton > button { min-height: 44px; }
+    .stButton > button { min-height: 44px; min-width: 44px; padding: 0.75rem 1rem; }
     .stButton > button:hover { transform: none !important; }
     .ob-card:hover, .ob-kpi:hover { transform: none !important; }
+    .ob-action-btn { min-height: 44px; min-width: 44px; }
     .stButton > button:active { transform: scale(0.97); opacity: 0.9; }
 }
 
@@ -1099,7 +1149,7 @@ div[data-testid="stTabs"] > div[role="tabpanel"] {
     border-color: rgba(79,143,234,0.4);
 }
 .mr-settings-search .search-icon {
-    color: rgba(200,205,213,0.38);
+    color: rgba(200,205,213,0.65);
     font-size: 1.1rem;
 }
 
@@ -1148,9 +1198,11 @@ div[data-testid="stTabs"] > div[role="tabpanel"] {
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+        animation: none !important;
+        transition: none !important;
+    }
+    *:focus-visible {
+        transition: outline 0.15s ease !important;
     }
 }
 

@@ -264,6 +264,12 @@ def _check_password() -> bool:
 if not _check_password():
     st.stop()
 
+# Skip navigation link for keyboard/screen reader users
+st.markdown(
+    '<a href="#main-content" class="skip-link">Skip to main content</a>',
+    unsafe_allow_html=True,
+)
+
 # Security: Debug mode from environment variable (disabled by default)
 # Set environment variable TAX_HELPER_DEBUG=1 to enable debug mode
 DEBUG = os.environ.get('TAX_HELPER_DEBUG', '0') == '1'
@@ -876,6 +882,9 @@ def render_receipt_upload_inline(txn: Transaction, session):
             st.success("✓ Receipt uploaded!")
             st.rerun()
 
+
+# Main content landmark for skip-link and screen readers
+st.markdown('<div id="main-content" tabindex="-1"></div>', unsafe_allow_html=True)
 
 # ============================================================================
 if page == "Dashboard":

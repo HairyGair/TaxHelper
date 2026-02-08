@@ -233,13 +233,13 @@ def render_income_vs_expenses_chart(session, start_date: datetime, end_date: dat
             xaxis=dict(
                 title='Month',
                 showgrid=True,
-                gridcolor='rgba(0,0,0,0.05)',
+                gridcolor='rgba(200, 205, 213, 0.15)',
                 tickformat='%b %Y'
             ),
             yaxis=dict(
                 title='Amount (£)',
                 showgrid=True,
-                gridcolor='rgba(0,0,0,0.1)',
+                gridcolor='rgba(200, 205, 213, 0.15)',
                 tickformat=',.0f',
                 tickprefix='£'
             ),
@@ -388,7 +388,7 @@ def render_monthly_comparison_bars(session, start_date: datetime, end_date: date
             yaxis=dict(
                 title='Amount (£)',
                 showgrid=True,
-                gridcolor='rgba(0,0,0,0.1)',
+                gridcolor='rgba(200, 205, 213, 0.15)',
                 tickformat=',.0f',
                 tickprefix='£'
             ),
@@ -680,13 +680,13 @@ def render_category_trend_chart(session, category: str, start_date: datetime, en
             xaxis=dict(
                 title=period_label,
                 showgrid=True,
-                gridcolor='rgba(0,0,0,0.05)',
+                gridcolor='rgba(200, 205, 213, 0.15)',
                 tickformat=date_format
             ),
             yaxis=dict(
                 title='Amount (£)',
                 showgrid=True,
-                gridcolor='rgba(0,0,0,0.1)',
+                gridcolor='rgba(200, 205, 213, 0.15)',
                 tickformat=',.0f',
                 tickprefix='£'
             ),
@@ -906,7 +906,7 @@ def render_yearly_comparison_chart(session, years: List[int]) -> None:
             yaxis=dict(
                 title='Amount (£)',
                 showgrid=True,
-                gridcolor='rgba(0,0,0,0.1)',
+                gridcolor='rgba(200, 205, 213, 0.15)',
                 tickformat=',.0f',
                 tickprefix='£'
             ),

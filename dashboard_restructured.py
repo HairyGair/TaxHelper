@@ -102,7 +102,7 @@ def render_restructured_dashboard(session, settings):
     with col1:
         profit_trend = _trend_html(cur_profit, prev_profit)
         st.markdown(f"""
-        <div class="ob-kpi mr-stagger-1">
+        <div class="ob-kpi mr-stagger-1" role="region" aria-label="Net Profit: {format_currency(net_profit)}">
             <div class="ob-kpi-label">Net Profit</div>
             <div class="ob-kpi-value" style="color: {'#36c7a0' if net_profit >= 0 else '#e07a5f'};">{format_currency(net_profit)}</div>
             {profit_trend}
@@ -111,7 +111,7 @@ def render_restructured_dashboard(session, settings):
 
     with col2:
         st.markdown(f"""
-        <div class="ob-kpi mr-stagger-2">
+        <div class="ob-kpi mr-stagger-2" role="region" aria-label="Estimated Tax: {format_currency(estimated_tax)}">
             <div class="ob-kpi-label">Estimated Tax</div>
             <div class="ob-kpi-value" style="color: #e5b567;">{format_currency(estimated_tax)}</div>
             <div class="ob-kpi-delta neutral">Due 31 January 2026</div>
@@ -121,7 +121,7 @@ def render_restructured_dashboard(session, settings):
     with col3:
         review_color = "#36c7a0" if completion_rate >= 100 else "#e5b567" if completion_rate >= 50 else "#e07a5f"
         st.markdown(f"""
-        <div class="ob-kpi mr-stagger-3">
+        <div class="ob-kpi mr-stagger-3" role="region" aria-label="Review Progress: {completion_rate:.0f}%">
             <div class="ob-kpi-label">Review Progress</div>
             <div class="ob-kpi-value" style="color: {review_color};">{completion_rate:.0f}%</div>
             <div class="ob-kpi-delta {'positive' if unreviewed == 0 else 'negative'}">{unreviewed} transaction{'s' if unreviewed != 1 else ''} pending</div>
@@ -131,7 +131,7 @@ def render_restructured_dashboard(session, settings):
     with col4:
         deadline_color = "#e07a5f" if days_until_deadline < 30 else "#e5b567" if days_until_deadline < 90 else "#36c7a0"
         st.markdown(f"""
-        <div class="ob-kpi mr-stagger-4">
+        <div class="ob-kpi mr-stagger-4" role="region" aria-label="Days to Deadline: {days_until_deadline}">
             <div class="ob-kpi-label">Days to Deadline</div>
             <div class="ob-kpi-value" style="color: {deadline_color};">{days_until_deadline}</div>
             <div class="ob-kpi-delta neutral">31 January 2026</div>
@@ -141,7 +141,7 @@ def render_restructured_dashboard(session, settings):
     # ── Quick Actions ───────────────────────────────────────────────────
     st.markdown("""
     <div class="ob-section-header">
-        <span class="ob-section-icon">&#9889;</span>
+        <span class="ob-section-icon" role="img" aria-label="Quick actions">&#9889;</span>
         <h3>Quick Actions</h3>
     </div>
     """, unsafe_allow_html=True)
@@ -173,8 +173,8 @@ def render_restructured_dashboard(session, settings):
     # ── Insight Alert ───────────────────────────────────────────────────
     if unreviewed > 0:
         st.markdown(f"""
-        <div class="ob-insight">
-            <span class="ob-insight-icon">&#128161;</span>
+        <div class="ob-insight" role="alert" aria-live="assertive">
+            <span class="ob-insight-icon" role="img" aria-label="Information">&#128161;</span>
             <div class="ob-insight-text">
                 <strong>Action Required:</strong> You have {unreviewed} unreviewed transaction{'s' if unreviewed != 1 else ''}.
                 Review them to ensure accurate tax calculations.
