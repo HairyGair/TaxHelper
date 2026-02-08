@@ -9,6 +9,9 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, and_, or_
 import os
 import io
+import hmac
+import hashlib
+import time
 
 # Import local modules
 from models import (
@@ -177,6 +180,89 @@ st.set_page_config(
 
 # Inject Obsidian Ledger unified design system
 inject_obsidian_theme()
+
+# ── Authentication ──────────────────────────────────────────────────────
+# Password is stored as a SHA-256 hash in Streamlit Cloud secrets:
+#   [general]
+#   password_hash = "<sha256 hex digest>"
+# Or via environment variable TAX_HELPER_PASSWORD_HASH.
+
+def _get_password_hash() -> str:
+    """Retrieve expected password hash from secrets or env."""
+    try:
+        return st.secrets["general"]["password_hash"]
+    except (KeyError, FileNotFoundError):
+        h = os.environ.get("TAX_HELPER_PASSWORD_HASH", "")
+        if h:
+            return h
+    return ""
+
+_EXPECTED_HASH = _get_password_hash()
+
+def _check_password() -> bool:
+    """Gate the app behind a password prompt. Returns True when authenticated."""
+    if not _EXPECTED_HASH:
+        return True  # No hash configured — skip auth (local dev)
+
+    def _on_submit():
+        entered = hashlib.sha256(
+            st.session_state["_pw_input"].encode()
+        ).hexdigest()
+        if hmac.compare_digest(entered, _EXPECTED_HASH):
+            st.session_state["_pw_ok"] = True
+            st.session_state["_pw_time"] = time.time()
+            st.session_state.pop("_pw_attempts", None)
+        else:
+            st.session_state["_pw_ok"] = False
+            st.session_state["_pw_attempts"] = (
+                st.session_state.get("_pw_attempts", 0) + 1
+            )
+        st.session_state.pop("_pw_input", None)
+
+    # Already authenticated — check 30-min timeout
+    if st.session_state.get("_pw_ok"):
+        if time.time() - st.session_state.get("_pw_time", 0) > 1800:
+            st.session_state.pop("_pw_ok", None)
+            st.rerun()
+        return True
+
+    # Lockout after 5 failed attempts (15 min)
+    attempts = st.session_state.get("_pw_attempts", 0)
+    locked_until = st.session_state.get("_pw_lockout", 0)
+    if attempts >= 5 and locked_until == 0:
+        st.session_state["_pw_lockout"] = time.time() + 900
+    if time.time() < locked_until:
+        mins = int((locked_until - time.time()) / 60) + 1
+        st.markdown(
+            f'<div style="text-align:center;padding:4rem 1rem;">'
+            f'<h2 style="color:#e07a5f;">Too many attempts</h2>'
+            f'<p style="color:#c8cdd5;">Try again in {mins} minute{"s" if mins != 1 else ""}.</p>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        st.stop()
+    if locked_until and time.time() >= locked_until:
+        st.session_state.pop("_pw_lockout", None)
+        st.session_state.pop("_pw_attempts", None)
+
+    # Login form
+    st.markdown(
+        '<div style="max-width:360px;margin:6rem auto;text-align:center;">'
+        '<div style="font-size:1.6rem;font-weight:700;color:#7aafff;margin-bottom:0.25rem;">Tax Helper</div>'
+        '<div style="font-size:0.75rem;color:rgba(200,205,213,0.38);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2rem;">UK Self Assessment</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    col1, col2, col3 = st.columns([1, 1.2, 1])
+    with col2:
+        st.text_input("Password", type="password", key="_pw_input", on_change=_on_submit)
+        if st.session_state.get("_pw_ok") is False:
+            remaining = 5 - attempts
+            st.error(f"Incorrect password. {remaining} attempt{'s' if remaining != 1 else ''} remaining.")
+    st.stop()
+
+if not _check_password():
+    st.stop()
 
 # Security: Debug mode from environment variable (disabled by default)
 # Set environment variable TAX_HELPER_DEBUG=1 to enable debug mode
